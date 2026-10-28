@@ -12,7 +12,6 @@ export async function getStaticPaths() {
     params: { slug: project.id },
     props: {
       project,
-      // Navigasi melingkar: selalu ada project sebelumnya & berikutnya (jika lebih dari satu)
       prev: projects.length > 1 ? projects[(i - 1 + projects.length) % projects.length] : null,
       next: projects.length > 1 ? projects[(i + 1) % projects.length] : null,
     },
@@ -23,16 +22,21 @@ const { project, prev, next } = Astro.props;
 const { title, year, desc, tech } = project.data;
 const thumb = images.projectThumbnails[project.id] || images.projectThumbnails["malka-smartschool"];
 
-// Judul section mengikuti struktur lama; paragraf tambahan (jika ada) masuk "More details"
+// Field opsional: tampil hanya jika diisi di frontmatter (lihat skema di catatan).
+const extra = project.data as Record<string, any>;
+const role: string | undefined = extra.role;
+const highlights: string[] = Array.isArray(extra.highlights) ? extra.highlights : [];
+const links: { label: string; href: string }[] = [
+  extra.repo && { label: 'Source code', href: extra.repo },
+  extra.demo && { label: 'Live demo', href: extra.demo },
+].filter(Boolean) as { label: string; href: string }[];
+
 const labels = ['The context', 'My role & solution', 'Technical execution & outcome'];
-const sections = desc.map((text: string, i: number) => ({
-  id: `s${i + 1}`,
-  label: labels[i] || 'More details',
-  text,
-}));
+const sections = desc.map((text: string, i: number) => ({ id: `s${i + 1}`, label: labels[i] || 'More details', text }));
+if (highlights.length) sections.push({ id: 'highlights', label: 'Highlights', text: '' });
 ---
 
-<BaseLayout title={`${title} — Muhamad Irfan`} description={desc[0]}>
+<BaseLayout title={`${title} — Muhamad Irfan`} description={desc[0]} image={thumb.url}>
   <article class="container-content pt-32 md:pt-40 pb-24 max-w-5xl mx-auto">
 
     <a href="/work" class="back reveal font-mono text-xs text-[var(--color-muted)] hover:text-[var(--color-accent)] mb-10 inline-flex items-center gap-2 transition-colors">
@@ -44,33 +48,55 @@ const sections = desc.map((text: string, i: number) => ({
         <span class="font-mono text-sm text-[var(--color-accent)]">{year}</span>
         <div class="h-px flex-1 bg-gradient-to-r from-[var(--color-border)] to-transparent"></div>
       </div>
-      <h1 class="text-4xl md:text-6xl font-serif leading-[1.08] max-w-3xl">{title}</h1>
+      <h1 class="text-4xl md:text-6xl font-serif leading-[1.08] max-w-3xl mb-8">{title}</h1>
+      {links.length > 0 && (
+        <div class="flex flex-wrap gap-3">
+          {links.map((l, i) => (
+            <a href={l.href} target="_blank" rel="noopener noreferrer" class={i === 0 ? 'btn-solid' : 'btn-line'}>
+              {l.label} <span aria-hidden="true">&nearr;</span>
+            </a>
+          ))}
+        </div>
+      )}
     </header>
 
-    <!-- Hero image -->
-    <figure class="hero-fig reveal rounded-2xl overflow-hidden glass-panel mb-16" style="--d:160ms">
+    <figure class="reveal rounded-2xl overflow-hidden glass-panel mb-16" style="--d:140ms">
       <div class="aspect-[16/9] md:aspect-[21/9] relative">
-        <img src={thumb.url} alt={thumb.alt} class="hero-img w-full h-full object-cover" loading="eager" decoding="async" />
+        <img src={thumb.url} alt={thumb.alt} class="w-full h-full object-cover" loading="eager" decoding="async" />
         <div class="absolute inset-0 bg-gradient-to-t from-[var(--color-bg)]/70 via-transparent to-transparent"></div>
       </div>
     </figure>
 
     <div class="grid lg:grid-cols-[1fr_240px] gap-12 lg:gap-16 items-start">
 
-      <!-- Konten -->
       <div class="space-y-14 min-w-0">
         {sections.map((s: { id: string; label: string; text: string }) => (
           <section id={s.id} data-section class="reveal scroll-mt-28">
             <h2 class="text-2xl font-serif text-[var(--color-fg)] mb-4 flex items-center gap-3">
               <span class="w-2 h-2 bg-[var(--color-accent)] rounded-full" aria-hidden="true"></span>{s.label}
             </h2>
-            <p class="text-lg text-[var(--color-muted)] leading-relaxed max-w-[62ch]">{s.text}</p>
+            {s.id === 'highlights' ? (
+              <ul class="space-y-3 max-w-[62ch]">
+                {highlights.map((h) => (
+                  <li class="flex gap-3 text-lg text-[var(--color-muted)] leading-relaxed">
+                    <span class="text-[var(--color-accent)] shrink-0" aria-hidden="true">&rarr;</span>{h}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p class="text-lg text-[var(--color-muted)] leading-relaxed max-w-[62ch]">{s.text}</p>
+            )}
           </section>
         ))}
       </div>
 
-      <!-- Sidebar -->
       <aside class="reveal lg:sticky lg:top-28 space-y-8" style="--d:120ms">
+        {role && (
+          <div>
+            <p class="font-mono text-xs text-[var(--color-muted)] mb-2">Role</p>
+            <p class="text-[var(--color-fg)]">{role}</p>
+          </div>
+        )}
         <div>
           <p class="font-mono text-xs text-[var(--color-muted)] mb-3">Stack</p>
           <ul class="flex flex-wrap gap-2">
@@ -79,7 +105,6 @@ const sections = desc.map((text: string, i: number) => ({
             ))}
           </ul>
         </div>
-
         {sections.length > 1 && (
           <nav aria-label="On this page" class="hidden lg:block">
             <p class="font-mono text-xs text-[var(--color-muted)] mb-3">On this page</p>
@@ -93,7 +118,6 @@ const sections = desc.map((text: string, i: number) => ({
       </aside>
     </div>
 
-    <!-- Prev / Next -->
     {prev && next && (
       <nav class="mt-28 pt-10 border-t border-[var(--color-border)] grid sm:grid-cols-2 gap-4 reveal" aria-label="More projects">
         <a href={`/work/${prev.id}`} class="pn glass-panel spot p-6 group" data-spotlight>
@@ -109,7 +133,6 @@ const sections = desc.map((text: string, i: number) => ({
   </article>
 
   <script>
-    /* Scroll-spy untuk daftar isi sidebar */
     const links = document.querySelectorAll<HTMLAnchorElement>('[data-toc]');
     const spy = new IntersectionObserver((entries) => {
       entries.forEach((e) => {
@@ -117,34 +140,16 @@ const sections = desc.map((text: string, i: number) => ({
       });
     }, { rootMargin: '-30% 0px -60% 0px' });
     document.querySelectorAll('[data-section]').forEach((s) => spy.observe(s));
-
-    /* Parallax halus pada gambar hero */
-    const img = document.querySelector<HTMLElement>('.hero-img');
-    if (img && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      let ticking = false;
-      window.addEventListener('scroll', () => {
-        if (ticking) return;
-        ticking = true;
-        requestAnimationFrame(() => {
-          img.style.setProperty('--py', `${Math.min(window.scrollY, 600) * 0.06}px`);
-          ticking = false;
-        });
-      }, { passive: true });
-    }
   </script>
 </BaseLayout>
 
 <style>
   .back-arrow { display: inline-block; transition: transform 0.4s var(--ease-out-expo); }
   .back:hover .back-arrow { transform: translateX(-4px); }
-  .hero-img { transform: translate3d(0, var(--py, 0px), 0) scale(1.08); will-change: transform; }
-
   .toc { display: block; margin-left: -1px; padding: 0.3rem 0 0.3rem 1rem; font-size: 0.85rem; color: var(--color-muted); border-left: 2px solid transparent; transition: color 0.3s, border-color 0.3s; }
   .toc:hover { color: var(--color-fg); }
   .toc.is-active { color: var(--color-accent); border-left-color: var(--color-accent); }
-
   .pn { display: block; transition: transform 0.5s var(--ease-out-expo), border-color 0.4s; }
   .pn:hover { transform: translateY(-4px); border-color: color-mix(in srgb, var(--color-accent) 40%, var(--color-border)); }
-
-  @media (prefers-reduced-motion: reduce) { .hero-img { transform: scale(1.02); } .pn, .back-arrow { transition: none; } }
+  @media (prefers-reduced-motion: reduce) { .pn, .back-arrow { transition: none; } }
 </style>

@@ -1,0 +1,366 @@
+---
+// src/pages/playground.astro
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PageHeader from '../components/PageHeader.astro';
+import { profile } from '../data/profile';
+---
+
+<BaseLayout
+  title={`Playground — ${profile.name}`}
+  description="Interactive demo of a human-in-the-loop request-response access control model for school information systems."
+>
+  <PageHeader
+    label="Playground"
+    title="Try the access-control model."
+    intro="A simplified, interactive version of the Human-in-the-Loop request-response mechanism from my paper. Switch roles, request access, and watch each decision being evaluated."
+  />
+
+  <section class="container-content pb-16">
+    <div class="grid lg:grid-cols-2 gap-6 items-start">
+
+      <!-- ===== Controls ===== -->
+      <div class="glass-panel p-6 md:p-8 space-y-8 reveal">
+        <div>
+          <p class="lbl">Authorization model</p>
+          <div class="seg" role="group" aria-label="Authorization model">
+            <button type="button" data-mode="rbac" aria-pressed="false">Plain RBAC</button>
+            <button type="button" data-mode="hitl" aria-pressed="true">HITL (paper)</button>
+          </div>
+          <p class="hint" id="mode-hint"></p>
+        </div>
+
+        <div>
+          <p class="lbl">Acting as</p>
+          <div class="seg" role="group" aria-label="Acting role">
+            <button type="button" data-role="parent" aria-pressed="true">Parent</button>
+            <button type="button" data-role="teacher" aria-pressed="false">Homeroom teacher</button>
+            <button type="button" data-role="visitor" aria-pressed="false">Visitor</button>
+          </div>
+        </div>
+
+        <div>
+          <p class="lbl">Student records</p>
+          <ul class="space-y-3">
+            <li class="obj">
+              <div>
+                <p class="obj-title">Attendance summary</p>
+                <p class="hint">Visible to the parent role</p>
+              </div>
+              <button type="button" class="btn-line btn-sm" data-open="attendance">Open</button>
+            </li>
+            <li class="obj">
+              <div>
+                <p class="obj-title">Restricted academic snapshot</p>
+                <p class="hint">Needs the teacher's approval in HITL mode</p>
+              </div>
+              <button type="button" class="btn-line btn-sm" data-open="snapshot">Open</button>
+            </li>
+          </ul>
+        </div>
+
+        <div>
+          <p class="lbl">Request workflow</p>
+          <div class="flex flex-wrap items-center gap-3">
+            <button type="button" id="btn-request" class="btn-solid btn-sm">Request access</button>
+            <button type="button" id="btn-approve" class="btn-line btn-sm">Approve</button>
+            <button type="button" id="btn-reject" class="btn-line btn-sm">Reject</button>
+            <button type="button" id="btn-reset" class="reset">Reset</button>
+          </div>
+          <p class="mt-4 text-sm text-[var(--color-muted)]">
+            Request status: <span id="req-status" class="status-chip" data-s="none">none</span>
+          </p>
+        </div>
+      </div>
+
+      <!-- ===== Output ===== -->
+      <div class="space-y-6 reveal" style="--d:100ms">
+        <div class="glass-panel p-6 md:p-8">
+          <p class="lbl">Decision</p>
+          <p id="trace" class="trace" aria-live="polite">Open a record to see the decision.</p>
+
+          <div id="verdict" class="verdict" data-state="idle" aria-live="polite">
+            <p id="verdict-title" class="verdict-title">No request yet</p>
+            <div id="verdict-body" class="verdict-body"></div>
+          </div>
+        </div>
+
+        <div class="glass-panel p-6 md:p-8">
+          <p class="lbl">Audit log</p>
+          <ol id="log" class="log"></ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Decision matrix ===== -->
+  <section class="container-content pb-24">
+    <div class="reveal">
+      <div class="flex flex-col md:flex-row md:items-end justify-between gap-3 mb-6">
+        <div>
+          <h2 class="text-3xl md:text-4xl font-serif mb-2">Decision matrix</h2>
+          <p class="text-[var(--color-muted)] max-w-xl">Every role against every state, evaluated by the same function that powers the demo above. Follows the selected model.</p>
+        </div>
+        <p class="font-mono text-xs text-[var(--color-muted)]" id="matrix-count"></p>
+      </div>
+      <div class="glass-panel overflow-x-auto">
+        <table class="matrix" id="matrix"></table>
+      </div>
+      <p class="mt-6 text-sm text-[var(--color-muted)] max-w-2xl">
+        This is a simplified demo of the model described in the paper, using sample data. It is not the production implementation.
+        <a href="/research" class="text-[var(--color-accent)] underline underline-offset-4">Read the paper</a>
+      </p>
+    </div>
+  </section>
+
+  <script>
+    type Role = 'parent' | 'teacher' | 'visitor';
+    type Obj = 'attendance' | 'snapshot';
+    type Approval = 'none' | 'pending' | 'approved' | 'rejected';
+    type Mode = 'rbac' | 'hitl';
+
+    const ROLES: Record<Role, string> = { parent: 'Parent', teacher: 'Homeroom teacher', visitor: 'Visitor' };
+    const OBJECTS: Record<Obj, { label: string; restricted: boolean }> = {
+      attendance: { label: 'Attendance summary', restricted: false },
+      snapshot: { label: 'Restricted academic snapshot', restricted: true },
+    };
+
+    /* ---------- Inti keputusan: fungsi murni, mudah diuji ---------- */
+    const rbac = (role: Role) => role !== 'visitor';
+
+    function decide(role: Role, obj: Obj, approval: Approval, mode: Mode) {
+      const hasRole = rbac(role);
+      // Hanya orang tua yang perlu persetujuan; wali kelas adalah pihak yang memberi persetujuan.
+      const needsApproval = mode === 'hitl' && OBJECTS[obj].restricted && role === 'parent';
+      const approved = !needsApproval || approval === 'approved';
+      return { hasRole, needsApproval, approved, allow: hasRole && approved };
+    }
+
+    const trace = (role: Role, obj: Obj, approval: Approval, mode: Mode) => {
+      const d = decide(role, obj, approval, mode);
+      const rb = `RBAC(${role}, ${obj}) = ${d.hasRole}`;
+      const expr = d.needsApproval ? `${rb} ∧ Approval = ${approval}` : rb;
+      const note = !d.needsApproval && mode === 'hitl' && OBJECTS[obj].restricted && role === 'teacher'
+        ? ' (teacher is the approver)'
+        : !d.needsApproval && mode === 'hitl' ? ' (no approval required)' : '';
+      return `${expr}${note} → ${d.allow ? 'ALLOW' : 'DENY'}`;
+    };
+
+    /* ---------- State & elemen ---------- */
+    const state = { role: 'parent' as Role, mode: 'hitl' as Mode, approval: 'none' as Approval };
+    const $ = <T extends HTMLElement>(s: string) => document.querySelector<T>(s)!;
+
+    const els = {
+      trace: $('#trace'), verdict: $('#verdict'), vTitle: $('#verdict-title'), vBody: $('#verdict-body'),
+      log: $('#log'), status: $('#req-status'), modeHint: $('#mode-hint'),
+      request: $<HTMLButtonElement>('#btn-request'), approve: $<HTMLButtonElement>('#btn-approve'),
+      reject: $<HTMLButtonElement>('#btn-reject'), matrix: $('#matrix'), matrixCount: $('#matrix-count'),
+    };
+
+    const time = () => new Date().toLocaleTimeString('en-GB');
+    const log = (msg: string, tone: 'ok' | 'no' | 'info' = 'info') => {
+      const li = document.createElement('li');
+      li.dataset.tone = tone;
+      const t = document.createElement('span'); t.textContent = time();
+      const m = document.createElement('span'); m.textContent = msg;
+      li.append(t, m);
+      els.log.prepend(li);
+      while (els.log.children.length > 8) els.log.lastElementChild?.remove();
+    };
+
+    /* ---------- Render ---------- */
+    const SAMPLE: Record<Obj, [string, string][]> = {
+      attendance: [['Semester 1', '94% present'], ['Excused absences', '2 days'], ['Unexcused', '0 days']],
+      snapshot: [['Mathematics', '88'], ['Science', '91'], ['Homeroom note', 'Consistent progress']],
+    };
+
+    function showVerdict(obj: Obj | null, allowed?: boolean, reason?: string) {
+      els.vBody.replaceChildren();
+      if (!obj) {
+        els.verdict.dataset.state = 'idle';
+        els.vTitle.textContent = 'No request yet';
+        return;
+      }
+      els.verdict.dataset.state = allowed ? 'allow' : 'deny';
+      els.vTitle.textContent = allowed ? `Access granted · ${OBJECTS[obj].label}` : `Access denied · ${OBJECTS[obj].label}`;
+      if (allowed) {
+        const dl = document.createElement('dl');
+        SAMPLE[obj].forEach(([k, v]) => {
+          const row = document.createElement('div');
+          const dt = document.createElement('dt'); dt.textContent = k;
+          const dd = document.createElement('dd'); dd.textContent = v;
+          row.append(dt, dd); dl.append(row);
+        });
+        const note = document.createElement('p'); note.className = 'sample'; note.textContent = 'Sample data';
+        els.vBody.append(dl, note);
+      } else {
+        const p = document.createElement('p'); p.textContent = reason || ''; els.vBody.append(p);
+      }
+    }
+
+    function renderControls() {
+      document.querySelectorAll<HTMLButtonElement>('[data-role]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.role === state.role)));
+      document.querySelectorAll<HTMLButtonElement>('[data-mode]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.mode === state.mode)));
+      els.status.textContent = state.approval;
+      els.status.dataset.s = state.approval;
+      els.modeHint.textContent = state.mode === 'rbac'
+        ? 'Role alone decides. A parent can open every record immediately.'
+        : 'Role is necessary but not sufficient. Restricted records also need the homeroom teacher\'s approval.';
+
+      const canRequest = state.mode === 'hitl' && state.role === 'parent' && (state.approval === 'none' || state.approval === 'rejected');
+      const canDecide = state.mode === 'hitl' && state.role === 'teacher' && state.approval === 'pending';
+      els.request.disabled = !canRequest;
+      els.approve.disabled = !canDecide;
+      els.reject.disabled = !canDecide;
+    }
+
+    function renderMatrix() {
+      const cols: { label: string; obj: Obj; approval: Approval }[] = [
+        { label: 'Attendance', obj: 'attendance', approval: 'none' },
+        { label: 'Snapshot · no request', obj: 'snapshot', approval: 'none' },
+        { label: 'Snapshot · pending', obj: 'snapshot', approval: 'pending' },
+        { label: 'Snapshot · approved', obj: 'snapshot', approval: 'approved' },
+        { label: 'Snapshot · rejected', obj: 'snapshot', approval: 'rejected' },
+      ];
+      const thead = document.createElement('thead');
+      const hr = document.createElement('tr');
+      const corner = document.createElement('th'); corner.textContent = 'Role'; hr.append(corner);
+      cols.forEach((c) => { const th = document.createElement('th'); th.textContent = c.label; hr.append(th); });
+      thead.append(hr);
+
+      const tbody = document.createElement('tbody');
+      (Object.keys(ROLES) as Role[]).forEach((role) => {
+        const tr = document.createElement('tr');
+        const th = document.createElement('th'); th.scope = 'row'; th.textContent = ROLES[role]; tr.append(th);
+        cols.forEach((c) => {
+          const td = document.createElement('td');
+          const allow = decide(role, c.obj, c.approval, state.mode).allow;
+          const chip = document.createElement('span');
+          chip.className = 'cell'; chip.dataset.allow = String(allow); chip.textContent = allow ? 'Allow' : 'Deny';
+          td.append(chip); tr.append(td);
+        });
+        tbody.append(tr);
+      });
+      els.matrix.replaceChildren(thead, tbody);
+      els.matrixCount.textContent = `${Object.keys(ROLES).length * cols.length} scenarios evaluated`;
+    }
+
+    const render = () => { renderControls(); renderMatrix(); };
+
+    /* ---------- Aksi ---------- */
+    function open(obj: Obj) {
+      const d = decide(state.role, obj, state.approval, state.mode);
+      els.trace.textContent = trace(state.role, obj, state.approval, state.mode);
+      let reason = '';
+      if (!d.hasRole) reason = 'This role has no permission for student records.';
+      else if (!d.approved) {
+        reason = state.approval === 'pending' ? 'Waiting for the homeroom teacher to review the request.'
+          : state.approval === 'rejected' ? 'The request was rejected. You can submit a new one.'
+          : 'Restricted record. Send a request to the homeroom teacher first.';
+      }
+      showVerdict(obj, d.allow, reason);
+      log(`${ROLES[state.role]} opened "${OBJECTS[obj].label}" → ${d.allow ? 'ALLOW' : 'DENY'}`, d.allow ? 'ok' : 'no');
+    }
+
+    document.querySelectorAll<HTMLButtonElement>('[data-open]').forEach((b) => b.addEventListener('click', () => open(b.dataset.open as Obj)));
+
+    document.querySelectorAll<HTMLButtonElement>('[data-role]').forEach((b) =>
+      b.addEventListener('click', () => {
+        state.role = b.dataset.role as Role;
+        log(`Switched role to ${ROLES[state.role]}`);
+        showVerdict(null);
+        els.trace.textContent = 'Open a record to see the decision.';
+        render();
+      })
+    );
+
+    document.querySelectorAll<HTMLButtonElement>('[data-mode]').forEach((b) =>
+      b.addEventListener('click', () => {
+        state.mode = b.dataset.mode as Mode;
+        log(`Model set to ${state.mode === 'rbac' ? 'Plain RBAC' : 'HITL'}`);
+        showVerdict(null);
+        els.trace.textContent = 'Open a record to see the decision.';
+        render();
+      })
+    );
+
+    els.request.addEventListener('click', () => {
+      state.approval = 'pending';
+      log('Parent requested access to the restricted snapshot', 'info');
+      render();
+    });
+    els.approve.addEventListener('click', () => {
+      state.approval = 'approved';
+      log('Homeroom teacher approved the request', 'ok');
+      render();
+    });
+    els.reject.addEventListener('click', () => {
+      state.approval = 'rejected';
+      log('Homeroom teacher rejected the request', 'no');
+      render();
+    });
+    $('#btn-reset').addEventListener('click', () => {
+      state.approval = 'none'; state.role = 'parent'; state.mode = 'hitl';
+      els.log.replaceChildren();
+      showVerdict(null);
+      els.trace.textContent = 'Open a record to see the decision.';
+      log('Session reset');
+      render();
+    });
+
+    log('Session started · model: HITL');
+    render();
+  </script>
+</BaseLayout>
+
+<style>
+  .lbl { font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.1em; color: var(--color-muted); margin-bottom: 0.75rem; text-transform: uppercase; }
+  .hint { font-size: 0.8rem; color: var(--color-muted); margin-top: 0.6rem; line-height: 1.5; }
+
+  .seg { display: inline-flex; flex-wrap: wrap; gap: 0.25rem; padding: 0.25rem; border: 1px solid var(--color-border); border-radius: 9999px; background: color-mix(in srgb, var(--color-bg) 50%, transparent); }
+  .seg button { padding: 0.45rem 1rem; border-radius: 9999px; font-size: 0.8rem; font-weight: 500; color: var(--color-muted); transition: color 0.3s, background-color 0.3s; }
+  .seg button:hover { color: var(--color-fg); }
+  .seg button[aria-pressed='true'] { background: var(--color-fg); color: var(--color-bg); }
+
+  .obj { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem 1.1rem; border: 1px solid var(--color-border); border-radius: 0.9rem; background: color-mix(in srgb, var(--color-bg) 40%, transparent); }
+  .obj-title { font-size: 0.95rem; color: var(--color-fg); }
+  .btn-sm { padding: 0.55rem 1.2rem; font-size: 0.8rem; }
+  button:disabled { opacity: 0.35; cursor: not-allowed; pointer-events: none; }
+  .reset { font-size: 0.8rem; color: var(--color-muted); text-decoration: underline; text-underline-offset: 4px; padding: 0.5rem; }
+  .reset:hover { color: var(--color-accent); }
+
+  .status-chip { font-family: var(--font-mono); font-size: 0.75rem; padding: 0.2rem 0.7rem; border-radius: 9999px; border: 1px solid var(--color-border); }
+  .status-chip[data-s='pending'] { color: #fbbf24; border-color: rgba(251, 191, 36, 0.4); }
+  .status-chip[data-s='approved'] { color: #4ade80; border-color: rgba(74, 222, 128, 0.4); }
+  .status-chip[data-s='rejected'] { color: #f87171; border-color: rgba(248, 113, 113, 0.4); }
+
+  .trace { font-family: var(--font-mono); font-size: 0.8rem; line-height: 1.6; color: var(--color-accent); word-break: break-word; min-height: 3rem; }
+
+  .verdict { margin-top: 1.25rem; padding: 1.25rem; border-radius: 0.9rem; border: 1px solid var(--color-border); transition: border-color 0.4s, background-color 0.4s; }
+  .verdict[data-state='allow'] { border-color: rgba(74, 222, 128, 0.45); background: rgba(74, 222, 128, 0.06); }
+  .verdict[data-state='deny'] { border-color: rgba(248, 113, 113, 0.45); background: rgba(248, 113, 113, 0.06); }
+  .verdict-title { font-family: var(--font-serif); font-size: 1.35rem; margin-bottom: 0.5rem; }
+  .verdict-body { font-size: 0.9rem; color: var(--color-muted); }
+  .verdict-body dl { display: grid; gap: 0.4rem; }
+  .verdict-body dl > div { display: flex; justify-content: space-between; gap: 1rem; border-bottom: 1px dashed var(--color-border); padding-bottom: 0.4rem; }
+  .verdict-body dt { color: var(--color-muted); }
+  .verdict-body dd { color: var(--color-fg); font-variant-numeric: tabular-nums; }
+  .sample { margin-top: 0.75rem; font-family: var(--font-mono); font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; }
+
+  .log { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; max-height: 17rem; overflow-y: auto; }
+  .log li { display: grid; grid-template-columns: 4.5rem 1fr; gap: 0.75rem; font-size: 0.8rem; color: var(--color-muted); animation: log-in 0.4s var(--ease-out-expo); }
+  .log li > span:first-child { font-family: var(--font-mono); font-size: 0.7rem; opacity: 0.7; padding-top: 0.1rem; }
+  .log li[data-tone='ok'] > span:last-child { color: #4ade80; }
+  .log li[data-tone='no'] > span:last-child { color: #f87171; }
+  @keyframes log-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+
+  .matrix { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 0.85rem; }
+  .matrix th, .matrix td { padding: 0.9rem 1rem; text-align: left; border-bottom: 1px solid var(--color-border); }
+  .matrix thead th { font-family: var(--font-mono); font-size: 0.7rem; font-weight: 400; color: var(--color-muted); white-space: nowrap; }
+  .matrix tbody th { font-weight: 500; color: var(--color-fg); white-space: nowrap; }
+  .matrix tbody tr:last-child th, .matrix tbody tr:last-child td { border-bottom: 0; }
+  .cell { display: inline-block; padding: 0.2rem 0.7rem; border-radius: 9999px; font-family: var(--font-mono); font-size: 0.7rem; }
+  .cell[data-allow='true'] { color: #4ade80; background: rgba(74, 222, 128, 0.1); }
+  .cell[data-allow='false'] { color: #f87171; background: rgba(248, 113, 113, 0.1); }
+
+  @media (prefers-reduced-motion: reduce) { .log li { animation: none; } }
+</style>

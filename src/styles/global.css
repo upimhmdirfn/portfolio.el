@@ -136,16 +136,14 @@
 
   /* ---------- Motion System ---------- */
 
-  /* 0. Reveal (dipakai di homepage): fade + naik + blur tipis, dengan delay via --d.
+  /* 0. Reveal: fade + naik tipis (tanpa blur, lebih tenang dan lebih ringan), dengan delay via --d.
         Digating oleh .js agar konten tetap terlihat jika JavaScript mati. */
   .js .reveal {
     opacity: 0;
-    transform: translate3d(0, 28px, 0);
-    filter: blur(6px);
+    transform: translate3d(0, 20px, 0);
     transition:
-      opacity var(--duration-slow) var(--ease-out-expo),
-      transform var(--duration-slow) var(--ease-out-expo),
-      filter var(--duration-slow) var(--ease-out-expo);
+      opacity 700ms var(--ease-out-expo),
+      transform 700ms var(--ease-out-expo);
     transition-delay: var(--d, 0ms);
     will-change: opacity, transform;
   }
@@ -191,6 +189,26 @@
       transition: none !important;
     }
   }
+
+  /* Tombol bersama (dipakai semua halaman) */
+  .btn-solid, .btn-line {
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; cursor: pointer;
+    border-radius: 9999px; padding: 0.85rem 1.9rem; font-size: 0.9rem; font-weight: 500;
+    transition: background-color 0.3s, color 0.3s, border-color 0.3s, box-shadow 0.4s;
+  }
+  .btn-solid { background: var(--color-fg); color: var(--color-bg); }
+  .btn-solid:hover { background: var(--color-accent); box-shadow: 0 0 28px rgba(139, 168, 255, 0.4); }
+  .btn-line { border: 1px solid var(--color-border); color: var(--color-fg); background: transparent; }
+  .btn-line:hover { border-color: var(--color-accent); color: var(--color-accent); }
+
+  /* Spotlight yang mengikuti kursor (butuh atribut data-spotlight; --mx/--my diisi oleh layout) */
+  .spot { position: relative; }
+  .spot::before {
+    content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 1;
+    opacity: 0; transition: opacity var(--duration-base) ease;
+    background: radial-gradient(420px circle at var(--mx, 50%) var(--my, 50%), rgba(139, 168, 255, 0.12), transparent 60%);
+  }
+  .spot:hover::before { opacity: 1; }
 
   /* Social Icon Base */
   .social-icon {

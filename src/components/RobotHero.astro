@@ -53,9 +53,9 @@ const {
     <span class="hud-corner hud-tr"></span>
     <span class="hud-corner hud-bl"></span>
     <span class="hud-corner hud-br"></span>
-    <p class="hud-status"><span class="hud-led"></span><span data-status>Standby</span></p>
+    <p class="hud-status"><span class="hud-led"></span><span data-status>Access restricted</span></p>
     <p class="hud-id"><b>{name}</b><span>{role}</span></p>
-    <p class="hud-hint" data-hint>Hover to scan</p>
+    <p class="hud-hint" data-hint>Hover to request access</p>
   </div>
 
   <div class="webgl-fallback">
@@ -244,7 +244,7 @@ const {
 
       const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       const coarse = window.matchMedia('(pointer: coarse)').matches;
-      if (coarse) hintEl.textContent = 'Tap to scan';
+      if (coarse) hintEl.textContent = 'Tap to request access';
 
       const setFace = (fx: number, fy: number, fr: number, a: number, base: number, px = 0, py = 0) => {
         face.style.setProperty('--fx', `${fx}px`);
@@ -544,7 +544,7 @@ const {
           if (mode !== s.mode) {
             s.mode = mode;
             this.dataset.mode = String(mode);
-            statusEl.textContent = ['Standby', 'Scanning…', 'Identity verified'][mode];
+            statusEl.textContent = ['Access restricted', 'Awaiting approval…', 'Access granted'][mode];
           }
         }
 
@@ -563,7 +563,7 @@ const {
           [eyeMat, coreMat, trimMat, tipMat].forEach((mm) => (mm.emissiveIntensity = 1.8));
           [haloL, haloR, coreHalo, tipHalo].forEach((sp) => (sp.material.opacity = 0.5));
           staticFace();
-          statusEl.textContent = 'Identity verified';
+          statusEl.textContent = 'Access granted';
           renderOnce();
         } else {
           start();
