@@ -1,0 +1,143 @@
+---
+// src/pages/about.astro
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PageHeader from '../components/PageHeader.astro';
+import { images } from '../data/portfolio-images';
+import { profile, experience, education, certifications } from '../data/profile';
+
+const facts = [
+  { label: 'Education', value: 'Universitas Pendidikan Indonesia' },
+  { label: 'Based in', value: profile.location },
+  { label: 'Focus', value: 'Web & mobile development, data processing' },
+  { label: 'Status', value: 'Open to entry-level roles' },
+];
+---
+
+<BaseLayout title={`About — ${profile.name}`} description="Computer Science graduate building practical, workflow-oriented applications.">
+  <PageHeader
+    label="About"
+    title="The developer behind the code."
+    intro="Computer Science graduate who builds practical, workflow-oriented applications, from government data portals to mobile platforms."
+  />
+
+  <!-- Intro + portrait -->
+  <section class="container-content pb-24 md:pb-32">
+    <div class="grid md:grid-cols-[0.8fr_1.4fr] gap-12 md:gap-20 items-start">
+
+      <figure class="portrait reveal md:sticky md:top-28" data-spotlight>
+        <div class="glass-panel spot p-2">
+          <div class="aspect-[3/4] rounded-lg overflow-hidden bg-[var(--color-bg-sec)] relative">
+            <img
+              src={images.aboutPortrait.url}
+              alt={images.aboutPortrait.alt}
+              class="portrait-img w-full h-full object-cover"
+              loading="eager"
+              decoding="async"
+            />
+            <div class="portrait-tint absolute inset-0 pointer-events-none"></div>
+            <figcaption class="absolute bottom-3 left-3 right-3 flex items-center justify-between font-mono text-[11px] text-[var(--color-fg)]/80">
+              <span>{profile.name}</span>
+              <span class="inline-flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-[#4ade80]"></span>Open to work</span>
+            </figcaption>
+          </div>
+        </div>
+      </figure>
+
+      <div class="reveal" style="--d:120ms">
+        <div class="max-w-[62ch] text-lg text-[var(--color-muted)] leading-relaxed space-y-6">
+          <p>
+            Computer Science graduate from Universitas Pendidikan Indonesia (GPA: 3.57/4.00). My work focuses on building practical, workflow-oriented applications, from government data portals to mobile platforms.
+          </p>
+          <p>
+            I have hands-on experience in web and mobile development, data processing (validating over 500,000 records for a national program), and project coordination.
+          </p>
+          <p>
+            Beyond code, I am interested in how authorization and human-in-the-loop systems can be designed to accommodate institutional governance without sacrificing usability.
+          </p>
+        </div>
+
+        <dl class="mt-12 grid sm:grid-cols-2 gap-px rounded-2xl overflow-hidden border border-[var(--color-border)] bg-[var(--color-border)]">
+          {facts.map((f) => (
+            <div class="bg-[var(--color-bg)]/80 backdrop-blur p-5">
+              <dt class="font-mono text-xs text-[var(--color-muted)] mb-1">{f.label}</dt>
+              <dd class="text-[var(--color-fg)]">{f.value}</dd>
+            </div>
+          ))}
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <!-- Experience -->
+  <section class="container-content pb-24 md:pb-32">
+    <h2 class="text-3xl md:text-4xl font-serif mb-10 pb-4 border-b border-[var(--color-border)] reveal">Work experience</h2>
+
+    <ol class="divide-y divide-[var(--color-border)]">
+      {experience.map((job, i) => (
+        <li class="exp-row reveal group grid md:grid-cols-[220px_1fr] gap-3 md:gap-10 py-8" style={`--d:${i * 70}ms`}>
+          <p class="font-mono text-sm text-[var(--color-accent)] md:pt-1">{job.period}</p>
+          <div>
+            <h3 class="text-2xl font-medium text-[var(--color-fg)] transition-colors group-hover:text-[var(--color-accent)]">{job.role}</h3>
+            <p class="text-[var(--color-fg)]/70 mt-1 mb-4">{job.org} <span class="text-[var(--color-muted)]">· {job.place}</span></p>
+            <p class="text-[var(--color-muted)] leading-relaxed max-w-[62ch]">{job.summary}</p>
+          </div>
+        </li>
+      ))}
+    </ol>
+  </section>
+
+  <!-- Education + Certifications -->
+  <section class="container-content">
+    <div class="grid md:grid-cols-2 gap-12 md:gap-16">
+
+      <div class="reveal">
+        <h2 class="text-3xl md:text-4xl font-serif mb-10 pb-4 border-b border-[var(--color-border)]">Education</h2>
+        <div class="glass-panel spot p-8" data-spotlight>
+          <h3 class="text-xl font-medium text-[var(--color-fg)] mb-1">{education.school}</h3>
+          <p class="text-sm font-mono text-[var(--color-accent)] mb-4">{education.period} · GPA {education.gpa}</p>
+          <p class="text-sm text-[var(--color-muted)] leading-relaxed">{education.degree}</p>
+          <div class="border-t border-[var(--color-border)] pt-4 mt-6">
+            <p class="text-xs font-mono text-[var(--color-muted)] mb-2">Thesis</p>
+            <p class="text-sm text-[var(--color-fg)] leading-relaxed">{education.thesis}</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="reveal" style="--d:100ms">
+        <h2 class="text-3xl md:text-4xl font-serif mb-10 pb-4 border-b border-[var(--color-border)]">Certifications</h2>
+        <ul class="space-y-4">
+          {certifications.map((c) => (
+            <li class="glass-panel spot p-6 flex items-start gap-4" data-spotlight>
+              <span class="w-12 h-12 rounded-full bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/20 flex items-center justify-center text-[var(--color-accent)] shrink-0" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              </span>
+              <div>
+                <h3 class="text-lg font-medium text-[var(--color-fg)]">{c.title}</h3>
+                <p class="text-sm text-[var(--color-muted)] mt-1">{c.issuer} · {c.date}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="container-content pt-24 md:pt-32 pb-8 text-center reveal">
+    <p class="text-2xl md:text-3xl font-serif mb-6">Want to work together?</p>
+    <a href="/contact" class="btn-cta">Get in touch <span aria-hidden="true">&rarr;</span></a>
+  </section>
+</BaseLayout>
+
+<style>
+  .portrait-img { filter: grayscale(1) contrast(1.05); opacity: 0.85; transition: filter 0.9s var(--ease-out-expo), opacity 0.9s var(--ease-out-expo), transform 1.2s var(--ease-out-expo); transform: scale(1.03); }
+  .portrait:hover .portrait-img { filter: grayscale(0); opacity: 1; transform: scale(1.07); }
+  .portrait-tint { background: linear-gradient(to top, var(--color-bg) 0%, transparent 45%); }
+  .exp-row { transition: background-color 0.4s ease; }
+  .btn-cta {
+    display: inline-flex; align-items: center; gap: 0.6rem; border-radius: 9999px; padding: 0.9rem 2.2rem;
+    font-size: 0.9rem; font-weight: 500; background: var(--color-fg); color: var(--color-bg);
+    transition: background-color 0.3s, box-shadow 0.4s;
+  }
+  .btn-cta:hover { background: var(--color-accent); box-shadow: 0 0 32px rgba(139, 168, 255, 0.45); }
+  @media (prefers-reduced-motion: reduce) { .portrait-img { transition: none; transform: none; } }
+</style>

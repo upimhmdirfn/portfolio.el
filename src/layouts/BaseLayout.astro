@@ -1,0 +1,261 @@
+---
+// src/layouts/BaseLayout.astro
+import '@fontsource/instrument-serif';
+import '@fontsource-variable/geist';
+import '@fontsource-variable/geist-mono';
+import '../styles/global.css';
+import PortfolioLoader from '../components/loader/PortfolioLoader.astro';
+
+interface Props {
+  title: string;
+  description?: string;
+}
+
+const {
+  title,
+  description = 'Software Developer and Data Enthusiast based in Bandung, Indonesia.',
+} = Astro.props;
+---
+
+<!doctype html>
+<html lang="en" class="bg-obsidian">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#050507" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <script is:inline>
+      document.documentElement.classList.add('js');
+      try {
+        const hasLoaded = sessionStorage.getItem('irfan_loaded');
+        if (!hasLoaded && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+          document.documentElement.classList.add('is-loading');
+        }
+      } catch (e) {}
+    </script>
+  </head>
+  <body class="text-[var(--color-fg)] flex flex-col min-h-screen relative overflow-x-clip">
+
+    <!-- Ambient background: grid + aurora + cursor spotlight -->
+    <div class="ambient" aria-hidden="true">
+      <div class="ambient-grid"></div>
+      <div class="ambient-orb ambient-orb-a"></div>
+      <div class="ambient-orb ambient-orb-b"></div>
+    </div>
+    <div id="cursor-glow" class="cursor-glow" aria-hidden="true"></div>
+
+    <!-- Scroll Progress Bar -->
+    <div class="fixed top-0 left-0 w-full h-[2px] z-[100] pointer-events-none" aria-hidden="true">
+      <div id="scroll-progress" class="scroll-progress"></div>
+    </div>
+
+    <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] bg-[var(--color-fg)] text-[var(--color-bg)] px-4 py-2 rounded font-medium">
+      Skip to content
+    </a>
+
+    <PortfolioLoader />
+
+    <header id="site-header" class="site-header fixed top-4 left-1/2 w-[calc(100%-2rem)] max-w-5xl z-50">
+      <nav class="glass-panel nav-shell flex items-center justify-between gap-4 px-5 md:px-6 py-3 rounded-full" aria-label="Main Navigation">
+        <a href="/" class="font-serif text-xl italic tracking-wide text-[var(--color-fg)] hover:text-[var(--color-accent)] transition-colors shrink-0">
+          Irfan<span class="text-[var(--color-accent)]">.</span>
+        </a>
+        <ul class="nav-list flex items-center gap-1 text-xs md:text-sm font-medium overflow-x-auto no-scrollbar">
+          <li><a href="/#work" class="nav-link" data-section="work">Work</a></li>
+          <li><a href="/#timeline" class="nav-link" data-section="timeline">Timeline</a></li>
+          <li><a href="/#research" class="nav-link" data-section="research">Research</a></li>
+          <li><a href="/#about" class="nav-link" data-section="about">About</a></li>
+          <li><a href="/#contact" class="nav-link" data-section="contact">Contact</a></li>
+        </ul>
+      </nav>
+    </header>
+
+    <main id="main-content" class="flex-grow page-content relative z-10" tabindex="-1">
+      <slot />
+    </main>
+
+    <footer class="border-t border-[var(--color-border)] mt-24 relative z-10">
+      <div class="container-content flex flex-col gap-4 py-8 text-xs font-mono text-[var(--color-muted)] md:flex-row md:items-center md:justify-between tracking-wider">
+        <p>© {new Date().getFullYear()} Muhamad Irfan</p>
+        <p>Bandung, Indonesia</p>
+        <a href="#top" id="back-to-top" class="inline-flex items-center gap-2 hover:text-[var(--color-accent)] transition-colors">
+          Back to top <span aria-hidden="true">&uarr;</span>
+        </a>
+      </div>
+    </footer>
+
+    <script>
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      let hasLoaded = false;
+      try { hasLoaded = !!sessionStorage.getItem('irfan_loaded'); } catch (e) {}
+
+      /* 1. Reveal system (dimulai setelah loader selesai) */
+      const startReveal = () => {
+        const els = document.querySelectorAll('.reveal, .reveal-up, .reveal-clip, .stagger-container');
+        if (reduced || !('IntersectionObserver' in window)) {
+          els.forEach((el) => el.classList.add('is-visible'));
+          return;
+        }
+        const io = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((e) => {
+              if (e.isIntersecting) {
+                e.target.classList.add('is-visible');
+                io.unobserve(e.target);
+              }
+            });
+          },
+          { threshold: 0.12, rootMargin: '0px 0px -8% 0px' }
+        );
+        els.forEach((el) => io.observe(el));
+      };
+
+      const showContent = () => {
+        document.documentElement.classList.remove('is-loading');
+        document.body.classList.add('content-loaded');
+        startReveal();
+      };
+
+      if (hasLoaded || reduced) showContent();
+      else window.addEventListener('loaderComplete', showContent, { once: true });
+
+      /* 2. Scroll: progress bar + header hide/show (rAF throttled) */
+      const progressBar = document.getElementById('scroll-progress');
+      const header = document.getElementById('site-header');
+      let lastY = window.scrollY;
+      let ticking = false;
+
+      const onScroll = () => {
+        const y = window.scrollY;
+        const max = document.documentElement.scrollHeight - window.innerHeight;
+        if (progressBar && max > 0) progressBar.style.transform = `scaleX(${Math.min(y / max, 1)})`;
+
+        if (header) {
+          header.classList.toggle('is-scrolled', y > 24);
+          const goingDown = y > lastY + 4;
+          const goingUp = y < lastY - 4;
+          if (goingDown && y > 240) header.classList.add('is-hidden');
+          else if (goingUp || y < 240) header.classList.remove('is-hidden');
+        }
+        lastY = y;
+        ticking = false;
+      };
+      window.addEventListener('scroll', () => {
+        if (!ticking) { requestAnimationFrame(onScroll); ticking = true; }
+      }, { passive: true });
+      onScroll();
+
+      /* 3. Scroll spy */
+      const navLinks = document.querySelectorAll<HTMLAnchorElement>('.nav-link');
+      const sections = document.querySelectorAll('section[data-section-id]');
+      const setActive = (id: string | null) => {
+        navLinks.forEach((link) => {
+          const on = link.dataset.section === id;
+          link.classList.toggle('is-active', on);
+          if (on) link.setAttribute('aria-current', 'true');
+          else link.removeAttribute('aria-current');
+        });
+      };
+      const spy = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) setActive(entry.target.getAttribute('data-section-id'));
+          });
+        },
+        { rootMargin: '-35% 0px -55% 0px' }
+      );
+      sections.forEach((s) => spy.observe(s));
+      window.addEventListener('scroll', () => { if (window.scrollY < 200) setActive(null); }, { passive: true });
+
+      /* 4. Cursor spotlight (hanya perangkat dengan mouse) */
+      const glow = document.getElementById('cursor-glow');
+      if (glow && !reduced && window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+        let tx = window.innerWidth / 2, ty = window.innerHeight / 2, cx = tx, cy = ty;
+        window.addEventListener('pointermove', (e) => {
+          tx = e.clientX; ty = e.clientY;
+          glow.classList.add('is-on');
+        }, { passive: true });
+        const loop = () => {
+          cx += (tx - cx) * 0.12;
+          cy += (ty - cy) * 0.12;
+          glow.style.transform = `translate3d(${cx - 300}px, ${cy - 300}px, 0)`;
+          requestAnimationFrame(loop);
+        };
+        loop();
+      }
+
+      /* 5. Back to top (smooth) */
+      document.getElementById('back-to-top')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        window.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' });
+      });
+    </script>
+  </body>
+</html>
+
+<style is:global>
+  html { scroll-behavior: smooth; scroll-padding-top: 6rem; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+  /* Ambient background */
+  .ambient { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+  .ambient-grid {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(to right, rgba(255,255,255,0.035) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255,255,255,0.035) 1px, transparent 1px);
+    background-size: 64px 64px;
+    mask-image: radial-gradient(ellipse 70% 60% at 50% 30%, #000 30%, transparent 100%);
+    -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 30%, #000 30%, transparent 100%);
+  }
+  .ambient-orb { position: absolute; border-radius: 9999px; filter: blur(110px); opacity: 0.22; will-change: transform; }
+  .ambient-orb-a { width: 46vw; height: 46vw; top: -12vw; left: -10vw; background: var(--color-accent, #8ba8ff); animation: orb-drift 22s ease-in-out infinite alternate; }
+  .ambient-orb-b { width: 38vw; height: 38vw; bottom: -14vw; right: -8vw; background: var(--color-accent-2, #7c5cff); animation: orb-drift 28s ease-in-out infinite alternate-reverse; }
+  @keyframes orb-drift {
+    from { transform: translate3d(0, 0, 0) scale(1); }
+    to   { transform: translate3d(6vw, 4vw, 0) scale(1.15); }
+  }
+
+  .cursor-glow {
+    position: fixed; top: 0; left: 0; width: 600px; height: 600px; z-index: 1; pointer-events: none;
+    background: radial-gradient(circle, rgba(139,168,255,0.10) 0%, transparent 60%);
+    opacity: 0; transition: opacity 0.6s ease; will-change: transform;
+  }
+  .cursor-glow.is-on { opacity: 1; }
+
+  /* Progress bar */
+  .scroll-progress {
+    height: 100%; width: 100%; transform: scaleX(0); transform-origin: left;
+    background: linear-gradient(90deg, var(--color-accent), var(--color-accent-2, #7c5cff));
+    box-shadow: 0 0 12px rgba(139,168,255,0.7);
+  }
+
+  /* Header */
+  .site-header {
+    transform: translate(-50%, 0);
+    transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.4s ease;
+  }
+  .site-header.is-hidden { transform: translate(-50%, -140%); }
+  .nav-shell { transition: padding 0.4s ease, box-shadow 0.4s ease, background-color 0.4s ease; }
+  .site-header.is-scrolled .nav-shell {
+    padding-top: 0.6rem; padding-bottom: 0.6rem;
+    box-shadow: 0 10px 40px -10px rgba(0,0,0,0.6), 0 0 0 1px rgba(139,168,255,0.12);
+  }
+  .nav-link {
+    position: relative; display: block; padding: 0.4rem 0.75rem; border-radius: 9999px;
+    color: var(--color-muted); transition: color 0.3s ease, background-color 0.3s ease; white-space: nowrap;
+  }
+  .nav-link:hover { color: var(--color-fg); }
+  .nav-link.is-active { color: var(--color-fg); background: rgba(139,168,255,0.14); }
+  .nav-link:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+  .no-scrollbar { scrollbar-width: none; }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+
+  /* Sistem reveal sekarang ada di global.css */
+  @media (prefers-reduced-motion: reduce) {
+    .ambient-orb { animation: none; }
+  }
+</style>

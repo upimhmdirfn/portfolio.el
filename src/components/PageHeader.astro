@@ -1,0 +1,23 @@
+---
+// src/components/PageHeader.astro
+// Header seragam untuk semua halaman dalam. pt-32 mencegah konten tertutup navbar yang fixed.
+interface Props {
+  label?: string;
+  title: string;
+  intro?: string;
+  narrow?: boolean;
+  class?: string;
+}
+const { label, title, intro, narrow = false, class: className = '' } = Astro.props;
+---
+
+<header class:list={['container-content pt-32 md:pt-40 pb-12 md:pb-16', narrow && 'max-w-4xl mx-auto', className]}>
+  {label && <p class="section-label mb-5 reveal">{label}</p>}
+  <h1 class="text-heading mb-6 reveal max-w-4xl" style="--d:80ms">{title}</h1>
+  {intro && (
+    <p class="text-lg md:text-xl text-[var(--color-muted)] max-w-2xl leading-relaxed reveal" style="--d:160ms">
+      {intro}
+    </p>
+  )}
+  <slot />
+</header>

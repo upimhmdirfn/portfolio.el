@@ -1,0 +1,134 @@
+---
+// src/pages/work/index.astro
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PageHeader from '../../components/PageHeader.astro';
+import { getCollection } from 'astro:content';
+import { images } from '../../data/portfolio-images';
+
+const projects = (await getCollection('work')).sort(
+  (a, b) => parseInt(b.data.year) - parseInt(a.data.year)
+);
+
+// Teknologi paling sering muncul jadi chip filter (maks 8)
+const freq = new Map<string, number>();
+projects.forEach((p) => p.data.tech.forEach((t: string) => freq.set(t, (freq.get(t) || 0) + 1)));
+const filters = [...freq.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, 8).map(([t]) => t);
+---
+
+<BaseLayout title="Work — Muhamad Irfan" description="Systems I've built, from government data portals to mobile platforms.">
+  <PageHeader
+    label="Archive"
+    title="Selected Work"
+    intro="A collection of systems I've built, ranging from government data portals to mobile platforms."
+  />
+
+  <section class="container-content pb-32">
+
+    <!-- Filter -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10 reveal">
+      <div class="flex flex-wrap gap-2" role="group" aria-label="Filter projects by technology">
+        <button type="button" class="f-chip" data-filter="all" aria-pressed="true">All</button>
+        {filters.map((t) => (
+          <button type="button" class="f-chip" data-filter={t} aria-pressed="false">{t}</button>
+        ))}
+      </div>
+      <p class="font-mono text-xs text-[var(--color-muted)]" id="result-count" aria-live="polite">{projects.length} projects</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="work-grid">
+      {projects.map((project, i) => {
+        const thumb = images.projectThumbnails[project.id] || images.projectThumbnails["malka-smartschool"];
+        return (
+          <a
+            href={`/work/${project.id}`}
+            class="w-card reveal group flex flex-col rounded-2xl glass-panel spot overflow-hidden"
+            style={`--d:${(i % 2) * 90}ms`}
+            data-tech={project.data.tech.join('|')}
+            data-spotlight
+          >
+            <div class="aspect-[16/10] overflow-hidden bg-[var(--color-bg-sec)] relative">
+              <img
+                src={thumb.url}
+                alt={thumb.alt}
+                class="w-img w-full h-full object-cover"
+                loading="lazy"
+                decoding="async"
+              />
+              <div class="absolute inset-0 bg-gradient-to-t from-[var(--color-bg)] to-transparent opacity-60"></div>
+              <span class="w-open" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></svg>
+              </span>
+            </div>
+
+            <div class="p-6 flex flex-col flex-grow relative z-10">
+              <span class="self-start font-mono text-xs text-[var(--color-muted)] border border-[var(--color-border)] px-2 py-1 rounded mb-3">{project.data.year}</span>
+              <h2 class="text-2xl font-serif mb-2 transition-colors group-hover:text-[var(--color-accent)]">{project.data.title}</h2>
+              <p class="text-sm text-[var(--color-muted)] line-clamp-2 leading-relaxed mb-6 flex-grow">{project.data.desc[0]}</p>
+              <div class="flex flex-wrap gap-2 mt-auto pt-4 border-t border-[var(--color-border)]/50">
+                {project.data.tech.slice(0, 3).map((tech: string) => (
+                  <span class="text-[10px] px-2 py-1 rounded bg-[var(--color-bg)]/50 border border-[var(--color-border)] font-mono text-[var(--color-muted)]">{tech}</span>
+                ))}
+              </div>
+            </div>
+          </a>
+        );
+      })}
+    </div>
+
+    <p id="empty-state" class="hidden text-center text-[var(--color-muted)] py-24">
+      No projects match this filter. <button type="button" id="reset-filter" class="text-[var(--color-accent)] underline underline-offset-4">Show all projects</button>
+    </p>
+  </section>
+
+  <script>
+    const chips = document.querySelectorAll<HTMLButtonElement>('[data-filter]');
+    const cards = document.querySelectorAll<HTMLElement>('.w-card');
+    const count = document.getElementById('result-count');
+    const empty = document.getElementById('empty-state');
+
+    const apply = (tech: string) => {
+      let shown = 0;
+      cards.forEach((c) => {
+        const match = tech === 'all' || (c.dataset.tech || '').split('|').includes(tech);
+        const wasHidden = c.classList.contains('is-hidden');
+        c.classList.toggle('is-hidden', !match);
+        if (match) {
+          shown++;
+          if (wasHidden) { c.classList.remove('pop'); void c.offsetWidth; c.classList.add('pop'); }
+        }
+      });
+      chips.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.filter === tech)));
+      if (count) count.textContent = `${shown} ${shown === 1 ? 'project' : 'projects'}`;
+      empty?.classList.toggle('hidden', shown > 0);
+    };
+
+    chips.forEach((b) => b.addEventListener('click', () => apply(b.dataset.filter || 'all')));
+    document.getElementById('reset-filter')?.addEventListener('click', () => apply('all'));
+  </script>
+</BaseLayout>
+
+<style>
+  .f-chip {
+    padding: 0.45rem 1rem; border-radius: 9999px; font-size: 0.8rem; font-family: var(--font-mono); color: var(--color-muted);
+    border: 1px solid var(--color-border); transition: color 0.3s, border-color 0.3s, background-color 0.3s;
+  }
+  .f-chip:hover { color: var(--color-fg); border-color: color-mix(in srgb, var(--color-accent) 50%, var(--color-border)); }
+  .f-chip[aria-pressed='true'] { color: var(--color-bg); background: var(--color-fg); border-color: var(--color-fg); }
+
+  .is-hidden { display: none !important; }
+  .pop { animation: pop-in 0.5s var(--ease-out-expo); }
+  @keyframes pop-in { from { opacity: 0; transform: translateY(14px) scale(0.98); } to { opacity: 1; transform: none; } }
+
+  .w-card { transition: transform 0.5s var(--ease-out-expo), border-color 0.4s, box-shadow 0.5s; }
+  .w-card:hover, .w-card:focus-visible { transform: translateY(-6px); border-color: color-mix(in srgb, var(--color-accent) 40%, var(--color-border)); box-shadow: 0 30px 60px -28px rgba(139, 168, 255, 0.35); }
+  .w-img { opacity: 0.8; transform: scale(1.02); transition: opacity 0.6s, transform 1.1s var(--ease-out-expo); }
+  .w-card:hover .w-img { opacity: 1; transform: scale(1.07); }
+  .w-open {
+    position: absolute; top: 1rem; right: 1rem; width: 2.25rem; height: 2.25rem; border-radius: 9999px; display: grid; place-items: center;
+    background: var(--color-fg); color: var(--color-bg); opacity: 0; transform: scale(0.6) rotate(-45deg);
+    transition: transform 0.5s var(--ease-out-expo), opacity 0.3s;
+  }
+  .w-card:hover .w-open, .w-card:focus-visible .w-open { opacity: 1; transform: none; }
+
+  @media (prefers-reduced-motion: reduce) { .w-card, .w-img, .w-open, .pop { transition: none; animation: none; } }
+</style>

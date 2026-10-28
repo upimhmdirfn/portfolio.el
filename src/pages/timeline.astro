@@ -1,0 +1,119 @@
+---
+// src/pages/timeline.astro
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PageHeader from '../components/PageHeader.astro';
+import { timelineData, profile } from '../data/profile';
+
+const types = ['All', ...Array.from(new Set(timelineData.flatMap((g) => g.items.map((i) => i.type))))];
+const countOf = (t: string) =>
+  t === 'All' ? timelineData.reduce((n, g) => n + g.items.length, 0) : timelineData.reduce((n, g) => n + g.items.filter((i) => i.type === t).length, 0);
+---
+
+<BaseLayout title={`Timeline — ${profile.name}`} description="A chronological overview of projects, professional experience, and academic milestones.">
+  <PageHeader
+    label="Chronology"
+    title="Timeline"
+    intro="A chronological overview of my projects, professional experiences, and academic milestones."
+    narrow
+  />
+
+  <section class="container-content max-w-4xl mx-auto pb-32">
+
+    <!-- Filter -->
+    <div class="sticky top-24 z-30 mb-12 reveal">
+      <div class="filter-bar glass-panel inline-flex max-w-full overflow-x-auto no-scrollbar gap-1 p-1.5 rounded-full" role="group" aria-label="Filter timeline by type">
+        {types.map((t, i) => (
+          <button type="button" class="chip-btn" data-filter={t} aria-pressed={i === 0 ? 'true' : 'false'}>
+            {t}<span class="chip-count">{countOf(t)}</span>
+          </button>
+        ))}
+      </div>
+      <p class="sr-only" aria-live="polite" id="timeline-status"></p>
+    </div>
+
+    <!-- Years -->
+    <div id="timeline-years" class="space-y-14 md:space-y-20">
+      {timelineData.map((group) => (
+        <section class="year-group grid md:grid-cols-[110px_1fr] gap-6 md:gap-10 reveal" data-year-group aria-label={`Year ${group.year}`}>
+          <h2 class="year-label font-serif italic text-5xl md:text-6xl text-[var(--color-fg)]/25 md:sticky md:top-44 self-start leading-none">
+            {group.year}
+          </h2>
+
+          <ol class="rail relative space-y-4 pl-6 md:pl-8">
+            {group.items.map((item) => (
+              <li class="t-item glass-panel spot group relative p-5 md:p-6" data-type={item.type} data-spotlight>
+                <span class="t-dot" aria-hidden="true"></span>
+                <div class="flex flex-col md:flex-row md:items-start justify-between gap-2 mb-1.5">
+                  <h3 class="text-lg md:text-xl font-medium text-[var(--color-fg)] transition-colors group-hover:text-[var(--color-accent)]">{item.title}</h3>
+                  <span class="t-badge font-mono text-[11px] px-2.5 py-1 rounded-full shrink-0 self-start">{item.type}</span>
+                </div>
+                <p class="text-sm text-[var(--color-muted)]">{item.subtitle}</p>
+              </li>
+            ))}
+          </ol>
+        </section>
+      ))}
+    </div>
+  </section>
+
+  <script>
+    const buttons = document.querySelectorAll<HTMLButtonElement>('[data-filter]');
+    const items = document.querySelectorAll<HTMLElement>('.t-item');
+    const groups = document.querySelectorAll<HTMLElement>('[data-year-group]');
+    const status = document.getElementById('timeline-status');
+
+    const apply = (type: string) => {
+      let shown = 0;
+      items.forEach((el) => {
+        const match = type === 'All' || el.dataset.type === type;
+        const wasHidden = el.classList.contains('is-hidden');
+        el.classList.toggle('is-hidden', !match);
+        if (match) {
+          shown++;
+          if (wasHidden) { el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); }
+        }
+      });
+      groups.forEach((g) => {
+        const any = g.querySelector('.t-item:not(.is-hidden)');
+        g.classList.toggle('is-hidden', !any);
+      });
+      buttons.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.filter === type)));
+      if (status) status.textContent = `${shown} ${shown === 1 ? 'entry' : 'entries'} shown`;
+    };
+
+    buttons.forEach((b) => b.addEventListener('click', () => apply(b.dataset.filter || 'All')));
+  </script>
+</BaseLayout>
+
+<style>
+  .chip-btn {
+    display: inline-flex; align-items: center; gap: 0.5rem; white-space: nowrap;
+    padding: 0.5rem 1rem; border-radius: 9999px; font-size: 0.8rem; font-weight: 500;
+    color: var(--color-muted); transition: color 0.3s, background-color 0.3s;
+  }
+  .chip-btn:hover { color: var(--color-fg); }
+  .chip-btn[aria-pressed='true'] { color: var(--color-bg); background: var(--color-fg); }
+  .chip-count { font-family: var(--font-mono); font-size: 0.65rem; opacity: 0.6; }
+
+  .is-hidden { display: none !important; }
+  .pop { animation: pop-in 0.5s var(--ease-out-expo); }
+  @keyframes pop-in { from { opacity: 0; transform: translateY(12px) scale(0.98); } to { opacity: 1; transform: none; } }
+
+  /* Rail + titik berwarna per tipe */
+  .rail::before { content: ''; position: absolute; left: 0; top: 0.75rem; bottom: 0.75rem; width: 2px; background: var(--color-border); border-radius: 2px; }
+  .t-item { --tc: var(--color-accent); }
+  .t-item[data-type='Experience'] { --tc: #4ade80; }
+  .t-item[data-type='Education'] { --tc: #b79cff; }
+  .t-item[data-type='Certification'] { --tc: #fbbf24; }
+  .t-item[data-type='Organization'] { --tc: #f472b6; }
+  .t-dot {
+    position: absolute; left: calc(-1.5rem - 6px); top: 1.7rem; width: 12px; height: 12px; border-radius: 9999px;
+    background: var(--color-bg); border: 2px solid var(--tc);
+    transition: background-color 0.3s, transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.4s;
+  }
+  @media (min-width: 768px) { .t-dot { left: calc(-2rem - 6px); } }
+  .t-item:hover .t-dot { background: var(--tc); transform: scale(1.35); box-shadow: 0 0 14px var(--tc); }
+  .t-badge { color: var(--tc); border: 1px solid color-mix(in srgb, var(--tc) 35%, transparent); background: color-mix(in srgb, var(--tc) 10%, transparent); }
+
+  @media (prefers-reduced-motion: reduce) { .pop { animation: none; } }
+</style>

@@ -1,0 +1,209 @@
+---
+// src/components/loader/PortfolioLoader.astro
+---
+
+<div id="portfolio-loader" class="loader-wrapper bg-[var(--color-bg)]">
+  <div class="loader-content">
+    <!-- Wordmark -->
+    <div class="loader-brand font-serif italic text-3xl mb-12">Irfan.</div>
+
+    <!-- Chrome Rings (Loading Indicator) -->
+    <div class="loader-rings">
+      <div class="ring-base"></div>
+      <div class="ring-progress" id="loader-ring"></div>
+    </div>
+
+    <!-- Percentage & Status -->
+    <div class="loader-info font-mono text-sm mt-8">
+      <div class="flex justify-between items-center w-full text-[var(--color-muted)]">
+        <span class="tracking-widest uppercase text-xs" id="loader-status">PREPARING EXPERIENCE</span>
+        <span class="text-[var(--color-accent)] font-bold text-lg" id="loader-percentage">000%</span>
+      </div>
+      <!-- Progress Bar Line -->
+      <div class="loader-bar-bg mt-3">
+        <div class="loader-bar-fill" id="loader-bar"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .loader-wrapper {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.8s;
+  }
+
+  /* Kelas ini ditambahkan via JS saat selesai */
+  .loader-wrapper.is-hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  .loader-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: 320px;
+    padding: 2rem;
+  }
+
+  /* Chrome Rings */
+  .loader-rings {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .ring-base {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .ring-progress {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    border-top-color: var(--color-accent);
+    border-right-color: var(--color-accent);
+    transform: rotate(-45deg);
+    transition: transform 0.1s linear;
+  }
+
+  /* Progress Bar Line */
+  .loader-bar-bg {
+    width: 100%;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .loader-bar-fill {
+    height: 100%;
+    width: 0%;
+    background: var(--color-accent);
+    transition: width 0.1s linear;
+  }
+
+  /* Reduced Motion */
+  @media (prefers-reduced-motion: reduce) {
+    .loader-wrapper { transition: none !important; }
+    .ring-progress { transition: none !important; transform: none !important; border-color: var(--color-accent) !important; }
+    .loader-bar-fill { transition: none !important; }
+  }
+</style>
+
+<script>
+  // Script diletakkan di dalam komponen agar tereksekusi segera
+  const loader = document.getElementById('portfolio-loader');
+  const percentageText = document.getElementById('loader-percentage');
+  const progressBar = document.getElementById('loader-bar');
+  const progressRing = document.getElementById('loader-ring');
+  const statusText = document.getElementById('loader-status');
+
+  // Cek apakah user sudah melihat loader di sesi ini
+  const hasLoaded = sessionStorage.getItem('irfan_loaded');
+  const isReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  if (hasLoaded || isReduced) {
+    // Jika sudah pernah load atau reduced motion, sembunyikan seketika
+    if (loader) {
+      loader.style.display = 'none';
+    }
+    // Pastikan body tidak terkunci (jika ada script yang mengunci)
+    document.body.style.overflow = '';
+  } else if (loader) {
+    // Kunci scroll selama loading
+    document.body.style.overflow = 'hidden';
+
+    let currentProgress = 0;
+    let targetProgress = 0;
+    let reqId: number;
+
+    // Simulasi progres (maksimal 90% sebelum window load)
+    const simulateProgress = () => {
+      if (targetProgress < 85) {
+        targetProgress += Math.random() * 5;
+        if (targetProgress > 85) targetProgress = 85;
+      }
+    };
+
+    const interval = setInterval(simulateProgress, 150);
+
+    const updateUI = () => {
+      // Animasi halus menuju target
+      currentProgress += (targetProgress - currentProgress) * 0.1;
+      
+      if (Math.abs(targetProgress - currentProgress) < 0.1) {
+        currentProgress = targetProgress;
+      }
+
+      const displayVal = Math.floor(currentProgress);
+      const formatted = String(displayVal).padStart(3, '0') + '%';
+      
+      if (percentageText) percentageText.innerText = formatted;
+      if (progressBar) progressBar.style.width = `${displayVal}%`;
+      
+      // Putar ring (dari -45deg ke 315deg untuk efek visual)
+      if (progressRing) {
+        const ringDeg = -45 + (displayVal * 3.6);
+        progressRing.style.transform = `rotate(${ringDeg}deg)`;
+      }
+
+      if (currentProgress < targetProgress) {
+        reqId = requestAnimationFrame(updateUI);
+      }
+    };
+
+    updateUI();
+
+    const finishLoading = () => {
+      clearInterval(interval);
+      targetProgress = 100;
+      if (statusText) statusText.innerText = 'READY';
+      
+      // Paksa update terakhir ke 100%
+      currentProgress = 99;
+      reqId = requestAnimationFrame(updateUI);
+
+      // Tunggu sebentar agar user melihat 100%, lalu sembunyikan
+     // Di dalam PortfolioLoader.astro
+      setTimeout(() => {
+        loader.classList.add('is-hidden');
+        document.body.style.overflow = ''; 
+        sessionStorage.setItem('irfan_loaded', 'true');
+        
+        // Kirim event kustom agar BaseLayout memunculkan konten
+        window.dispatchEvent(new Event('loaderComplete'));
+        
+        setTimeout(() => {
+          loader.remove();
+        }, 1000);
+      }, 600);
+    };
+
+    // Event listener saat halaman benar-benar siap
+    window.addEventListener('load', finishLoading);
+
+    // Fail-safe: Jika window.load lambat (misal ada gambar eksternal), 
+    // paksa selesai dalam 2 detik.
+    setTimeout(() => {
+      if (!loader.classList.contains('is-hidden')) {
+        finishLoading();
+      }
+    }, 2000);
+  }
+</script>

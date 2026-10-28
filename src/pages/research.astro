@@ -1,0 +1,237 @@
+---
+// src/pages/research.astro
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PageHeader from '../components/PageHeader.astro';
+import { profile } from '../data/profile';
+
+const doi = 'https://doi.org/10.33369/pseudocode.13.2.150-163';
+const title = 'Human-in-the-Loop Request-Response Access Control for Mobile Smart School Information Systems';
+
+// Sesuaikan daftar penulis dengan versi yang tercetak di jurnal.
+const citation = `Irfan, M. (2026). ${title}: A TAM evaluation. Jurnal Pseudocode, 13(2), 150–163. ${doi}`;
+
+const toc = [
+  { id: 'problem', label: 'The problem' },
+  { id: 'solution', label: 'The solution' },
+  { id: 'flow', label: 'How it works' },
+  { id: 'results', label: 'Results' },
+  { id: 'cite', label: 'Cite this work' },
+];
+
+const flow = [
+  { step: 'Request', text: 'A parent asks for a restricted academic snapshot.', actor: 'Parent' },
+  { step: 'RBAC check', text: 'The system verifies the parent role. Necessary, but not sufficient.', actor: 'System' },
+  { step: 'Human review', text: 'The homeroom teacher verifies and decides on the request.', actor: 'Homeroom teacher' },
+  { step: 'Release', text: 'Only an Approved state releases the data. Anything else stays locked.', actor: 'System' },
+];
+
+const R2 = 0.734;
+const C = 2 * Math.PI * 54; // keliling gauge
+---
+
+<BaseLayout title="Published Research — Muhamad Irfan" description={`${title}.`}>
+  <PageHeader
+    label="Peer-reviewed publication, 2026"
+    title={title}
+    intro="A TAM evaluation. Published in Jurnal Pseudocode, Vol. 13, No. 2."
+    narrow
+  >
+    <div class="flex flex-wrap gap-4 mt-10 reveal" style="--d:240ms">
+      <a href={doi} target="_blank" rel="noopener noreferrer" class="btn-solid">Read paper (DOI) <span aria-hidden="true">&nearr;</span></a>
+      <a href="#cite" class="btn-line">Cite this work</a>
+    </div>
+  </PageHeader>
+
+  <div class="container-content max-w-5xl mx-auto pb-32">
+    <div class="grid lg:grid-cols-[200px_1fr] gap-12 lg:gap-16 items-start">
+
+      <!-- TOC -->
+      <nav class="hidden lg:block sticky top-32 reveal" aria-label="On this page">
+        <p class="font-mono text-xs text-[var(--color-muted)] mb-4">On this page</p>
+        <ul class="space-y-1 border-l border-[var(--color-border)]">
+          {toc.map((t) => (
+            <li>
+              <a href={`#${t.id}`} class="toc-link" data-toc={t.id}>{t.label}</a>
+            </li>
+          ))}
+        </ul>
+      </nav>
+
+      <article class="space-y-24 min-w-0">
+
+        <section id="problem" data-toc-section class="reveal">
+          <h2 class="h2">The problem</h2>
+          <div class="prose-col space-y-4">
+            <p>
+              In Islamic boarding schools (pesantren), parental access to student data must balance transparency with institutional governance. Existing systems either provide unrestricted role-based access (RBAC) or entirely block parents from sensitive academic records.
+            </p>
+            <p>
+              There was a gap for an authorization mechanism that incorporates human judgment, allowing a designated institutional actor (the homeroom teacher) to verify and approve sensitive academic data before it is released.
+            </p>
+          </div>
+        </section>
+
+        <section id="solution" data-toc-section class="reveal">
+          <h2 class="h2">The solution</h2>
+          <div class="prose-col space-y-6">
+            <p>
+              I designed a <strong class="text-[var(--color-fg)] font-medium">Human-in-the-Loop (HITL) Request-Response</strong> mechanism that extends conventional RBAC. Possession of a parent role is necessary but not sufficient; access to restricted academic snapshots requires an explicit approval state from the homeroom teacher.
+            </p>
+          </div>
+          <div class="formula glass-panel text-center p-8 my-8">
+            <p class="font-mono text-sm md:text-base text-[var(--color-accent)] break-words">
+              Access(u,o) = RBAC(u,o) ∧ Approval(r,u,o) = Approved
+            </p>
+          </div>
+        </section>
+
+        <section id="flow" data-toc-section class="reveal">
+          <h2 class="h2">How it works</h2>
+          <ol class="flow grid sm:grid-cols-2 gap-4 mt-8">
+            {flow.map((f, i) => (
+              <li class="flow-step glass-panel spot p-6" data-spotlight style={`--i:${i}`}>
+                <div class="flex items-center justify-between mb-4">
+                  <span class="flow-n font-mono text-xs">{String(i + 1).padStart(2, '0')}</span>
+                  <span class="font-mono text-[11px] text-[var(--color-muted)]">{f.actor}</span>
+                </div>
+                <h3 class="text-xl font-serif text-[var(--color-fg)] mb-2">{f.step}</h3>
+                <p class="text-sm text-[var(--color-muted)] leading-relaxed">{f.text}</p>
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        <section id="results" data-toc-section class="reveal">
+          <h2 class="h2">Evaluation &amp; results</h2>
+          <div class="grid md:grid-cols-[1fr_1.1fr] gap-6 mt-8">
+
+            <div class="glass-panel p-8 flex flex-col justify-between gap-8">
+              <div>
+                <p class="font-mono text-xs text-[var(--color-muted)] mb-4">Functional testing</p>
+                <p class="text-6xl font-serif text-[var(--color-fg)]"><span data-count="100" data-decimals="0">100</span>%</p>
+              </div>
+              <p class="text-sm text-[var(--color-muted)]">
+                <span data-count="45" data-decimals="0">45</span> role-based test scenarios executed successfully.
+              </p>
+            </div>
+
+            <div class="glass-panel p-8 flex items-center gap-8">
+              <svg class="gauge shrink-0" width="132" height="132" viewBox="0 0 132 132" role="img" aria-label={`R squared equals ${R2}`} style={`--c:${C.toFixed(2)};--to:${(C * (1 - R2)).toFixed(2)}`}>
+                <circle cx="66" cy="66" r="54" fill="none" stroke="var(--color-border)" stroke-width="8" />
+                <circle class="gauge-arc" cx="66" cy="66" r="54" fill="none" stroke="var(--color-accent)" stroke-width="8" stroke-linecap="round" transform="rotate(-90 66 66)" />
+              </svg>
+              <div>
+                <p class="font-mono text-xs text-[var(--color-muted)] mb-2">User acceptance</p>
+                <p class="text-4xl md:text-5xl font-serif text-[var(--color-accent)] mb-3">R² = <span data-count={R2} data-decimals="3">{R2}</span></p>
+                <p class="text-sm text-[var(--color-muted)]">PU, PEOU, and ATU significantly influenced BI (N=59).</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="cite" data-toc-section class="reveal">
+          <h2 class="h2">Cite this work</h2>
+          <div class="glass-panel p-6 md:p-8 mt-8">
+            <p id="citation-text" class="text-sm md:text-base text-[var(--color-muted)] leading-relaxed break-words">{citation}</p>
+            <div class="flex flex-wrap items-center gap-4 mt-6">
+              <button type="button" id="copy-citation" class="btn-line">Copy citation</button>
+              <a href={doi} target="_blank" rel="noopener noreferrer" class="link-u font-mono text-sm text-[var(--color-accent)]">{doi.replace('https://', '')}</a>
+              <span id="copy-status" class="sr-only" aria-live="polite"></span>
+            </div>
+          </div>
+        </section>
+      </article>
+    </div>
+  </div>
+
+  <script>
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    /* TOC scroll-spy */
+    const links = document.querySelectorAll<HTMLAnchorElement>('[data-toc]');
+    const spy = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        if (!e.isIntersecting) return;
+        links.forEach((l) => l.classList.toggle('is-active', l.dataset.toc === e.target.id));
+      });
+    }, { rootMargin: '-30% 0px -60% 0px' });
+    document.querySelectorAll('[data-toc-section]').forEach((s) => spy.observe(s));
+
+    /* Count-up */
+    const ease = (t: number) => 1 - Math.pow(1 - t, 4);
+    const counters = document.querySelectorAll<HTMLElement>('[data-count]');
+    const cio = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        if (!e.isIntersecting) return;
+        const el = e.target as HTMLElement;
+        cio.unobserve(el);
+        const target = parseFloat(el.dataset.count || '0');
+        const d = parseInt(el.dataset.decimals || '0', 10);
+        if (reduced) { el.textContent = target.toFixed(d); return; }
+        const t0 = performance.now();
+        const tick = (now: number) => {
+          const p = Math.min((now - t0) / 1600, 1);
+          el.textContent = (target * ease(p)).toFixed(d);
+          if (p < 1) requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      });
+    }, { threshold: 0.6 });
+    counters.forEach((el) => {
+      if (!reduced) el.textContent = (0).toFixed(parseInt(el.dataset.decimals || '0', 10));
+      cio.observe(el);
+    });
+
+    /* Copy citation */
+    const btn = document.getElementById('copy-citation') as HTMLButtonElement | null;
+    const status = document.getElementById('copy-status');
+    btn?.addEventListener('click', async () => {
+      const text = document.getElementById('citation-text')?.textContent?.trim() || '';
+      try {
+        await navigator.clipboard.writeText(text);
+        btn.textContent = 'Copied';
+        if (status) status.textContent = 'Citation copied to clipboard';
+      } catch {
+        btn.textContent = 'Press Ctrl+C to copy';
+        const range = document.createRange();
+        range.selectNodeContents(document.getElementById('citation-text')!);
+        const sel = window.getSelection(); sel?.removeAllRanges(); sel?.addRange(range);
+      }
+      setTimeout(() => (btn.textContent = 'Copy citation'), 2200);
+    });
+  </script>
+</BaseLayout>
+
+<style>
+  .h2 { font-family: var(--font-serif); font-size: clamp(1.75rem, 3vw, 2.25rem); margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--color-border); }
+  .prose-col { max-width: 62ch; font-size: 1.125rem; line-height: 1.75; color: var(--color-muted); }
+
+  .btn-solid, .btn-line {
+    display: inline-flex; align-items: center; gap: 0.5rem; border-radius: 9999px; padding: 0.85rem 1.9rem;
+    font-size: 0.9rem; font-weight: 500; transition: background-color 0.3s, color 0.3s, border-color 0.3s, box-shadow 0.4s;
+  }
+  .btn-solid { background: var(--color-fg); color: var(--color-bg); }
+  .btn-solid:hover { background: var(--color-accent); box-shadow: 0 0 28px rgba(139, 168, 255, 0.4); }
+  .btn-line { border: 1px solid var(--color-border); color: var(--color-fg); background: transparent; cursor: pointer; }
+  .btn-line:hover { border-color: var(--color-accent); color: var(--color-accent); }
+
+  .toc-link { display: block; margin-left: -1px; padding: 0.35rem 0 0.35rem 1rem; font-size: 0.875rem; color: var(--color-muted); border-left: 2px solid transparent; transition: color 0.3s, border-color 0.3s; }
+  .toc-link:hover { color: var(--color-fg); }
+  .toc-link.is-active { color: var(--color-accent); border-left-color: var(--color-accent); }
+
+  .link-u { text-decoration: underline; text-underline-offset: 4px; text-decoration-color: color-mix(in srgb, var(--color-accent) 40%, transparent); }
+
+  /* Flow: nomor menyala berurutan saat terlihat */
+  .flow-n { color: var(--color-accent); border: 1px solid color-mix(in srgb, var(--color-accent) 35%, transparent); border-radius: 9999px; padding: 0.2rem 0.6rem; }
+  :global(.reveal.is-visible) .flow-step { animation: step-in 0.7s var(--ease-out-expo) both; animation-delay: calc(var(--i) * 140ms + 150ms); }
+  @keyframes step-in { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+
+  /* Gauge R² */
+  .gauge-arc { stroke-dasharray: var(--c); stroke-dashoffset: var(--c); transition: stroke-dashoffset 1.8s var(--ease-out-expo) 0.2s; filter: drop-shadow(0 0 6px rgba(139, 168, 255, 0.55)); }
+  :global(.reveal.is-visible) .gauge-arc { stroke-dashoffset: var(--to); }
+
+  @media (prefers-reduced-motion: reduce) {
+    :global(.reveal.is-visible) .flow-step { animation: none; }
+    .gauge-arc { transition: none; stroke-dashoffset: var(--to); }
+  }
+</style>

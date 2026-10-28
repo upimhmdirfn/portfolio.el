@@ -1,0 +1,81 @@
+---
+// src/components/ClosingQuote.astro
+---
+<section class="relative py-32 md:py-48 overflow-hidden bg-[var(--color-bg)]">
+  <!-- Ambient Glow -->
+  <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80vw] h-[80vw] max-w-4xl max-h-4xl bg-[var(--color-accent)] rounded-full blur-[120px] opacity-[0.03] pointer-events-none"></div>
+
+  <div class="container-content relative z-10 max-w-4xl mx-auto text-center">
+    <p class="section-label justify-center mb-8 reveal-up">Closing Statement</p>
+    
+    <div class="relative inline-block text-left">
+      <!-- Quotation Mark Decoration -->
+      <span class="absolute -top-12 -left-8 text-8xl font-serif text-[var(--color-border)] opacity-50 select-none" aria-hidden="true">&ldquo;</span>
+      
+      <!-- Quote Text -->
+      <h2 id="quote-text" class="text-3xl md:text-5xl lg:text-6xl font-serif leading-[1.2] text-[var(--color-fg)] opacity-0" data-full-text="Build with purpose. Stay curious. Let the work speak.">
+        Build with purpose. Stay curious. Let the work speak.
+      </h2>
+      
+      <!-- Blinking Caret -->
+      <span id="quote-caret" class="inline-block w-[3px] h-[1em] bg-[var(--color-accent)] ml-2 align-middle animate-pulse opacity-0" aria-hidden="true"></span>
+    </div>
+  </div>
+</section>
+
+<script>
+  const quoteElement = document.getElementById('quote-text');
+  const caret = document.getElementById('quote-caret');
+  const section = quoteElement?.closest('section');
+
+  if (quoteElement && caret && section) {
+    const fullText = quoteElement.getAttribute('data-full-text') || '';
+    const isReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let hasTyped = false;
+
+    // Fungsi untuk mengetik
+    const typeText = () => {
+      if (hasTyped) return;
+      hasTyped = true;
+
+      // Jika reduced motion, langsung tampilkan
+      if (isReducedMotion) {
+        quoteElement.innerText = fullText;
+        quoteElement.style.opacity = '1';
+        return;
+      }
+
+      // Siapkan animasi ketik
+      quoteElement.innerText = '';
+      quoteElement.style.opacity = '1';
+      caret.style.opacity = '1';
+      let i = 0;
+
+      const typeInterval = setInterval(() => {
+        if (i < fullText.length) {
+          quoteElement.innerText += fullText.charAt(i);
+          i++;
+        } else {
+          clearInterval(typeInterval);
+          // Sembunyikan caret setelah selesai mengetik
+          setTimeout(() => {
+            caret.style.opacity = '0';
+            caret.classList.remove('animate-pulse');
+          }, 1000);
+        }
+      }, 35); // Kecepatan ketik 35ms per huruf
+    };
+
+    // Observer untuk memicu animasi saat di-scroll
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          typeText();
+          observer.disconnect(); // Hanya jalan sekali
+        }
+      });
+    }, { threshold: 0.5 }); // Picu saat 50% section terlihat
+
+    observer.observe(section);
+  }
+</script>

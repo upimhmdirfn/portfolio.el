@@ -1,0 +1,138 @@
+---
+// src/pages/contact.astro
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PageHeader from '../components/PageHeader.astro';
+import SocialLinks from '../components/SocialLinks.astro';
+import { profile } from '../data/profile';
+
+const topics = [
+  { id: 'job', label: 'Job opportunity', subject: 'Job opportunity', body: "Hi Irfan,\n\nI'd like to talk with you about a role at our company.\n\n" },
+  { id: 'project', label: 'Project', subject: 'Project inquiry', body: "Hi Irfan,\n\nI have a project I'd like to discuss with you.\n\n" },
+  { id: 'hello', label: 'Just saying hi', subject: 'Hello', body: 'Hi Irfan,\n\n' },
+];
+---
+
+<BaseLayout title={`Contact — ${profile.name}`} description="Open to entry-level software development roles. Get in touch by email or social platforms.">
+  <PageHeader
+    label="Contact"
+    title="Let's build something."
+    intro="I am currently open to entry-level software development roles. Whether you have an opportunity, a project, or just want to connect, my inbox is always open."
+    narrow
+  />
+
+  <section class="container-content max-w-4xl mx-auto pb-32">
+
+    <!-- Topik: mengisi subjek email secara otomatis -->
+    <div class="reveal mb-6">
+      <p class="font-mono text-xs text-[var(--color-muted)] mb-3">What is this about?</p>
+      <div class="flex flex-wrap gap-2" role="group" aria-label="Choose an email topic">
+        {topics.map((t, i) => (
+          <button
+            type="button"
+            class="topic-btn"
+            data-topic={t.id}
+            data-subject={t.subject}
+            data-body={t.body}
+            aria-pressed={i === 0 ? 'true' : 'false'}
+          >{t.label}</button>
+        ))}
+      </div>
+    </div>
+
+    <!-- Email utama -->
+    <div class="reveal mb-16" style="--d:100ms">
+      <div class="email-card glass-panel spot flex flex-col md:flex-row md:items-center justify-between gap-6 p-8" data-spotlight>
+        <div class="min-w-0">
+          <p class="text-sm font-mono text-[var(--color-accent)] mb-2">Email</p>
+          <p class="text-2xl md:text-3xl font-serif text-[var(--color-fg)] break-all" id="email-text">{profile.email}</p>
+        </div>
+        <div class="flex flex-wrap gap-3 shrink-0">
+          <button type="button" id="copy-email" class="btn-line">Copy address</button>
+          <a id="mailto-link" href={`mailto:${profile.email}?subject=${encodeURIComponent(topics[0].subject)}&body=${encodeURIComponent(topics[0].body)}`} class="btn-solid">
+            Write an email <span aria-hidden="true">&rarr;</span>
+          </a>
+        </div>
+      </div>
+      <p id="copy-status" class="sr-only" aria-live="polite"></p>
+    </div>
+
+    <!-- Info lokasi + jam lokal -->
+    <div class="reveal grid sm:grid-cols-2 gap-px rounded-2xl overflow-hidden border border-[var(--color-border)] bg-[var(--color-border)] mb-16" style="--d:140ms">
+      <div class="bg-[var(--color-bg)]/80 backdrop-blur p-6">
+        <p class="font-mono text-xs text-[var(--color-muted)] mb-1">Based in</p>
+        <p class="text-lg text-[var(--color-fg)]">{profile.location}</p>
+      </div>
+      <div class="bg-[var(--color-bg)]/80 backdrop-blur p-6">
+        <p class="font-mono text-xs text-[var(--color-muted)] mb-1">Local time</p>
+        <p class="text-lg text-[var(--color-fg)] font-mono tabular-nums" id="local-time" data-tz={profile.timezone}>--:--</p>
+      </div>
+    </div>
+
+    <!-- Sosial -->
+    <div class="reveal border-t border-[var(--color-border)] pt-12" style="--d:180ms">
+      <h2 class="text-2xl font-serif mb-4">Connect elsewhere</h2>
+      <p class="text-[var(--color-muted)] mb-8 max-w-lg">You can also find me on these platforms. I'm most responsive on LinkedIn and email.</p>
+      <SocialLinks size="lg" />
+    </div>
+  </section>
+
+  <script>
+    /* Topik -> mailto */
+    const email = (document.getElementById('email-text')?.textContent || '').trim();
+    const link = document.getElementById('mailto-link') as HTMLAnchorElement | null;
+    const topicBtns = document.querySelectorAll<HTMLButtonElement>('[data-topic]');
+    topicBtns.forEach((b) =>
+      b.addEventListener('click', () => {
+        topicBtns.forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+        if (link) {
+          link.href = `mailto:${email}?subject=${encodeURIComponent(b.dataset.subject || '')}&body=${encodeURIComponent(b.dataset.body || '')}`;
+        }
+      })
+    );
+
+    /* Salin email */
+    const copyBtn = document.getElementById('copy-email') as HTMLButtonElement | null;
+    const status = document.getElementById('copy-status');
+    copyBtn?.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(email);
+        copyBtn.textContent = 'Copied';
+        if (status) status.textContent = 'Email address copied to clipboard';
+      } catch {
+        copyBtn.textContent = 'Press Ctrl+C';
+        const range = document.createRange();
+        range.selectNodeContents(document.getElementById('email-text')!);
+        const sel = window.getSelection(); sel?.removeAllRanges(); sel?.addRange(range);
+      }
+      setTimeout(() => (copyBtn.textContent = 'Copy address'), 2200);
+    });
+
+    /* Jam lokal */
+    const clock = document.getElementById('local-time');
+    if (clock) {
+      const tz = clock.dataset.tz || 'Asia/Jakarta';
+      const fmt = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: tz });
+      const tick = () => { clock.textContent = `${fmt.format(new Date())} WIB`; };
+      tick();
+      setInterval(tick, 15000);
+    }
+  </script>
+</BaseLayout>
+
+<style>
+  .topic-btn {
+    padding: 0.5rem 1.1rem; border-radius: 9999px; font-size: 0.85rem; color: var(--color-muted);
+    border: 1px solid var(--color-border); transition: color 0.3s, border-color 0.3s, background-color 0.3s;
+  }
+  .topic-btn:hover { color: var(--color-fg); border-color: color-mix(in srgb, var(--color-accent) 50%, var(--color-border)); }
+  .topic-btn[aria-pressed='true'] { color: var(--color-bg); background: var(--color-fg); border-color: var(--color-fg); }
+
+  .btn-solid, .btn-line {
+    display: inline-flex; align-items: center; gap: 0.5rem; border-radius: 9999px; padding: 0.8rem 1.6rem;
+    font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: background-color 0.3s, color 0.3s, border-color 0.3s, box-shadow 0.4s;
+  }
+  .btn-solid { background: var(--color-fg); color: var(--color-bg); }
+  .btn-solid:hover { background: var(--color-accent); box-shadow: 0 0 28px rgba(139, 168, 255, 0.4); }
+  .btn-line { border: 1px solid var(--color-border); color: var(--color-fg); background: transparent; }
+  .btn-line:hover { border-color: var(--color-accent); color: var(--color-accent); }
+</style>

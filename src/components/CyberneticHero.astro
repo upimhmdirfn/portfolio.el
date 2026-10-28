@@ -1,0 +1,587 @@
+---
+// src/components/CyberneticHero.astro
+interface Props {
+  modelPath?: string;
+  posterPath?: string;
+}
+const {
+  modelPath = "/images/tiny_planet_friends_3d-astronaut-3192.glb",
+  posterPath = "/images/hero-poster.jpg",
+} = Astro.props;
+---
+
+<cyber-hero class="hero-scene" data-model={modelPath} data-state="loading">
+  <!-- Decorative layers -->
+  <div class="cyber-glow"></div>
+  <div class="cyber-rings" aria-hidden="true">
+    <div class="ring ring-1"></div>
+    <div class="ring ring-2"></div>
+    <div class="ring ring-3"></div>
+  </div>
+
+  <!-- 3D stage -->
+  <div
+    class="cyber-canvas-wrapper"
+    tabindex="0"
+    role="img"
+    aria-label="Interactive 3D model. Drag or use the arrow keys to rotate."
+  >
+    <div class="webgl-skeleton" aria-hidden="true">
+      <div class="skeleton-spinner"></div>
+      <span class="skeleton-text">Initializing 3D <b data-progress>0%</b></span>
+    </div>
+    <canvas class="webgl-canvas"></canvas>
+  </div>
+
+  <!-- HUD overlay -->
+  <div class="hud" aria-hidden="true">
+    <span class="hud-corner hud-tl"></span>
+    <span class="hud-corner hud-tr"></span>
+    <span class="hud-corner hud-bl"></span>
+    <span class="hud-corner hud-br"></span>
+    <p class="hud-readout">
+      <span>YAW <b data-yaw>000°</b></span>
+      <span>PITCH <b data-pitch>000°</b></span>
+    </p>
+    <p class="hud-hint">Drag to rotate</p>
+  </div>
+
+  <!-- Fallback (tanpa WebGL) -->
+  <div class="webgl-fallback">
+    <img src={posterPath} alt="" class="webgl-fallback-img" onerror="this.style.display='none'" />
+    <div class="glass-panel p-8 max-w-sm text-center relative z-10">
+      <p class="text-[var(--color-fg)] font-serif text-xl mb-2">3D preview unavailable</p>
+      <p class="text-[var(--color-muted)] font-mono text-sm">Your browser may not support WebGL, or the model failed to load.</p>
+    </div>
+  </div>
+
+  <div class="cyber-pointer-light"></div>
+</cyber-hero>
+
+<style>
+  cyber-hero { display: block; }
+
+  .hero-scene {
+    position: relative; width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden; border-radius: 2rem;
+  }
+
+  /* ---------- Decorative ---------- */
+  .cyber-glow {
+    position: absolute; top: 50%; left: 50%; width: 80%; height: 80%;
+    transform: translate(-50%, -50%);
+    background: radial-gradient(circle, rgba(139, 168, 255, 0.18) 0%, transparent 60%);
+    filter: blur(60px); z-index: 0;
+    animation: pulse-glow 6s infinite alternate ease-in-out;
+  }
+  @keyframes pulse-glow {
+    0%   { opacity: 0.7; transform: translate(-50%, -50%) scale(1); }
+    100% { opacity: 1;   transform: translate(-50%, -50%) scale(1.08); }
+  }
+
+  .cyber-rings { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 1; pointer-events: none; }
+  .ring { position: absolute; border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 50%; box-shadow: inset 0 0 20px rgba(139, 168, 255, 0.05); }
+  .ring-1 { width: 118%; height: 118%; border-top-color: rgba(139, 168, 255, 0.3); animation: spin 30s linear infinite; }
+  .ring-2 { width: 88%; height: 88%; border-left-color: rgba(183, 156, 255, 0.28); animation: spin-reverse 25s linear infinite; }
+  .ring-3 { width: 58%; height: 58%; border-bottom-color: rgba(255, 255, 255, 0.14); animation: spin 20s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes spin-reverse { to { transform: rotate(-360deg); } }
+
+  /* ---------- Canvas ---------- */
+  .cyber-canvas-wrapper {
+    position: relative; width: 100%; height: 100%; z-index: 2;
+    cursor: grab; touch-action: pan-y; user-select: none; -webkit-user-select: none;
+    border-radius: inherit;
+  }
+  .cyber-canvas-wrapper:focus-visible { outline-offset: -6px; }
+  cyber-hero[data-dragging] .cyber-canvas-wrapper { cursor: grabbing; }
+
+  .webgl-canvas {
+    display: block; width: 100%; height: 100%; outline: none;
+    opacity: 0; transform: scale(0.96);
+    transition: opacity 1.2s cubic-bezier(0.16, 1, 0.3, 1), transform 1.4s cubic-bezier(0.16, 1, 0.3, 1);
+    -webkit-mask-image: linear-gradient(to bottom, #000 78%, transparent 100%);
+    mask-image: linear-gradient(to bottom, #000 78%, transparent 100%);
+  }
+  cyber-hero[data-state='ready'] .webgl-canvas { opacity: 1; transform: none; }
+
+  /* ---------- Skeleton ---------- */
+  .webgl-skeleton {
+    position: absolute; inset: 0; z-index: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 1rem;
+    transition: opacity 0.6s ease, visibility 0.6s;
+  }
+  cyber-hero:not([data-state='loading']) .webgl-skeleton { opacity: 0; visibility: hidden; }
+  .skeleton-spinner {
+    width: 4rem; height: 4rem; border-radius: 9999px;
+    border: 2px solid rgba(139, 168, 255, 0.2); border-top-color: var(--color-accent);
+    animation: spin 1s linear infinite;
+  }
+  .skeleton-text { font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.12em; color: var(--color-muted); }
+  .skeleton-text b { font-weight: 500; color: var(--color-accent); font-variant-numeric: tabular-nums; margin-left: 0.4rem; }
+
+  /* ---------- HUD ---------- */
+  .hud { position: absolute; inset: 0; z-index: 4; pointer-events: none; opacity: 0; transition: opacity 1s ease 0.6s; }
+  cyber-hero[data-state='ready'] .hud { opacity: 1; }
+  .hud-corner { position: absolute; width: 18px; height: 18px; border: 1px solid rgba(139, 168, 255, 0.45); }
+  .hud-tl { top: 1rem; left: 1rem; border-right: 0; border-bottom: 0; border-top-left-radius: 6px; }
+  .hud-tr { top: 1rem; right: 1rem; border-left: 0; border-bottom: 0; border-top-right-radius: 6px; }
+  .hud-bl { bottom: 1rem; left: 1rem; border-right: 0; border-top: 0; border-bottom-left-radius: 6px; }
+  .hud-br { bottom: 1rem; right: 1rem; border-left: 0; border-top: 0; border-bottom-right-radius: 6px; }
+  .hud-readout {
+    position: absolute; left: 2.2rem; bottom: 1.1rem; display: flex; gap: 1rem;
+    font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.1em; color: var(--color-muted);
+  }
+  .hud-readout b { font-weight: 500; color: var(--color-accent); font-variant-numeric: tabular-nums; }
+  .hud-hint {
+    position: absolute; left: 50%; bottom: 1.1rem; transform: translateX(-50%);
+    font-family: var(--font-mono); font-size: 0.65rem; letter-spacing: 0.12em; color: var(--color-muted);
+    transition: opacity 0.6s ease;
+  }
+  cyber-hero[data-touched] .hud-hint { opacity: 0; }
+  @media (max-width: 640px) { .hud-readout { display: none; } }
+
+  /* ---------- Fallback ---------- */
+  .webgl-fallback { position: absolute; inset: 0; z-index: 5; display: none; align-items: center; justify-content: center; padding: 1.5rem; }
+  cyber-hero[data-state='fallback'] .webgl-fallback { display: flex; }
+  cyber-hero[data-state='fallback'] .cyber-canvas-wrapper { display: none; }
+  .webgl-fallback-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.45; border-radius: inherit; }
+
+  /* ---------- Pointer light ---------- */
+  .cyber-pointer-light {
+    position: absolute; width: 400px; height: 400px; border-radius: 50%; z-index: 3;
+    background: radial-gradient(circle, rgba(139, 168, 255, 0.12) 0%, transparent 50%);
+    filter: blur(30px); pointer-events: none; opacity: 0; transition: opacity 0.3s ease;
+    transform: translate(-50%, -50%);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cyber-glow, .ring, .skeleton-spinner { animation: none !important; }
+    .cyber-pointer-light { display: none !important; }
+    .webgl-canvas { transition: none; }
+  }
+  @media (max-width: 1024px) { .ring-1, .ring-2 { display: none; } }
+</style>
+
+<script>
+  type Three = typeof import('three');
+
+  const TAU = Math.PI * 2;
+  const clamp = (v: number, a: number, b: number) => Math.min(Math.max(v, a), b);
+  const easeOutExpo = (t: number) => (t === 1 ? 1 : 1 - Math.pow(2, -10 * t));
+  const easeOutBack = (t: number) => {
+    const c1 = 1.70158, c3 = c1 + 1;
+    return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+  };
+
+  const hasWebGL = () => {
+    try {
+      const c = document.createElement('canvas');
+      const gl = (c.getContext('webgl2') || c.getContext('webgl')) as WebGLRenderingContext | null;
+      gl?.getExtension('WEBGL_lose_context')?.loseContext();
+      return !!gl;
+    } catch {
+      return false;
+    }
+  };
+
+  class CyberHero extends HTMLElement {
+    private cleanup?: () => void;
+    private lazy?: IntersectionObserver;
+    private booted = false;
+
+    connectedCallback() {
+      if (this.booted) return;
+      // three.js hanya dimuat saat hero hampir terlihat: bundle awal jadi jauh lebih ringan
+      this.lazy = new IntersectionObserver(
+        (entries) => {
+          if (!entries[0].isIntersecting) return;
+          this.lazy?.disconnect();
+          this.booted = true;
+          void this.boot();
+        },
+        { rootMargin: '200px' }
+      );
+      this.lazy.observe(this);
+    }
+
+    disconnectedCallback() {
+      this.lazy?.disconnect();
+      this.cleanup?.();
+      this.cleanup = undefined;
+      this.booted = false;
+    }
+
+    private async boot() {
+      const container = this.querySelector<HTMLElement>('.cyber-canvas-wrapper')!;
+      const canvas = this.querySelector<HTMLCanvasElement>('.webgl-canvas')!;
+      const progressEl = this.querySelector<HTMLElement>('[data-progress]')!;
+      const light = this.querySelector<HTMLElement>('.cyber-pointer-light')!;
+      const yawEl = this.querySelector<HTMLElement>('[data-yaw]')!;
+      const pitchEl = this.querySelector<HTMLElement>('[data-pitch]')!;
+      const modelPath = this.dataset.model || '';
+
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const coarse = window.matchMedia('(pointer: coarse)').matches;
+      const fail = () => { this.dataset.state = 'fallback'; };
+
+      if (!hasWebGL()) return fail();
+
+      const mods = await Promise.all([
+        import('three'),
+        import('three/examples/jsm/loaders/GLTFLoader.js'),
+        import('three/examples/jsm/loaders/DRACOLoader.js'),
+        import('three/examples/jsm/environments/RoomEnvironment.js'),
+      ]).catch(() => null);
+      if (!mods) return fail();
+      if (!this.isConnected) return;
+
+      const [THREE, { GLTFLoader }, { DRACOLoader }, { RoomEnvironment }] = mods as [
+        Three,
+        typeof import('three/examples/jsm/loaders/GLTFLoader.js'),
+        typeof import('three/examples/jsm/loaders/DRACOLoader.js'),
+        typeof import('three/examples/jsm/environments/RoomEnvironment.js'),
+      ];
+
+      /* ---------- Renderer ---------- */
+      let renderer: InstanceType<Three['WebGLRenderer']>;
+      try {
+        renderer = new THREE.WebGLRenderer({
+          canvas, alpha: true, antialias: !coarse, powerPreference: 'high-performance',
+        });
+      } catch {
+        return fail();
+      }
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, coarse ? 1.5 : 2));
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.1;
+      renderer.setSize(container.clientWidth || 1, container.clientHeight || 1, false);
+
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
+
+      // Kamera menyesuaikan jarak agar model selalu muat, juga di layar sempit
+      const fitCamera = (w: number, h: number) => {
+        const aspect = w / h;
+        const halfSize = 2.7;
+        const t = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2);
+        camera.aspect = aspect;
+        camera.position.set(0, 0, Math.max(halfSize / t, halfSize / (t * aspect)));
+        camera.updateProjectionMatrix();
+      };
+      fitCamera(container.clientWidth || 1, container.clientHeight || 1);
+
+      /* ---------- Lighting: environment PBR + key/rim berwarna ---------- */
+      const pmrem = new THREE.PMREMGenerator(renderer);
+      const envTarget = pmrem.fromScene(new RoomEnvironment(), 0.04);
+      scene.environment = envTarget.texture;
+      Object.assign(scene, { environmentIntensity: 0.75 });
+
+      scene.add(new THREE.AmbientLight(0xffffff, 0.35));
+      const key = new THREE.DirectionalLight(0x8ba8ff, 2.4);
+      key.position.set(2, 3, 4);
+      scene.add(key);
+      const rim = new THREE.DirectionalLight(0xb79cff, 3.2);
+      rim.position.set(-3, 1.5, -3);
+      scene.add(rim);
+      const pointer3d = new THREE.PointLight(0x8ba8ff, 30, 14, 2);
+      pointer3d.position.set(0, 0, 3.5);
+      scene.add(pointer3d);
+
+      /* ---------- Scene graph ---------- */
+      const stage = new THREE.Group();      // rotasi dari interaksi
+      const introGroup = new THREE.Group(); // animasi masuk
+      const floatGroup = new THREE.Group(); // melayang
+      const modelRoot = new THREE.Group();  // auto-framing
+      floatGroup.add(modelRoot);
+      introGroup.add(floatGroup);
+      stage.add(introGroup);
+      scene.add(stage);
+
+      /* Partikel debu bercahaya */
+      const dotCanvas = document.createElement('canvas');
+      dotCanvas.width = dotCanvas.height = 64;
+      const dctx = dotCanvas.getContext('2d')!;
+      const grad = dctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+      grad.addColorStop(0, 'rgba(255,255,255,1)');
+      grad.addColorStop(0.4, 'rgba(180,200,255,0.5)');
+      grad.addColorStop(1, 'rgba(139,168,255,0)');
+      dctx.fillStyle = grad;
+      dctx.fillRect(0, 0, 64, 64);
+      const dotTex = new THREE.CanvasTexture(dotCanvas);
+      dotTex.colorSpace = THREE.SRGBColorSpace;
+
+      const COUNT = coarse ? 260 : 520;
+      const pos = new Float32Array(COUNT * 3);
+      for (let i = 0; i < COUNT; i++) {
+        const r = 3.6 + Math.random() * 4.5;
+        const th = Math.random() * TAU;
+        const ph = Math.acos(2 * Math.random() - 1);
+        pos[i * 3] = r * Math.sin(ph) * Math.cos(th);
+        pos[i * 3 + 1] = r * Math.sin(ph) * Math.sin(th);
+        pos[i * 3 + 2] = r * Math.cos(ph) - 1;
+      }
+      const pGeo = new THREE.BufferGeometry();
+      pGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      const particles = new THREE.Points(
+        pGeo,
+        new THREE.PointsMaterial({
+          map: dotTex, size: 0.14, sizeAttenuation: true, transparent: true, opacity: 0.85,
+          depthWrite: false, blending: THREE.AdditiveBlending, color: 0x9db6ff,
+        })
+      );
+      scene.add(particles);
+
+      /* Cincin orbit 3D + satelit */
+      const orbit = new THREE.Group();
+      orbit.rotation.set(1.15, 0.35, 0);
+      orbit.add(
+        new THREE.Mesh(
+          new THREE.TorusGeometry(3.2, 0.007, 8, 180),
+          new THREE.MeshBasicMaterial({ color: 0x8ba8ff, transparent: true, opacity: 0.55 })
+        )
+      );
+      const satPivot = new THREE.Group();
+      const sat = new THREE.Mesh(
+        new THREE.SphereGeometry(0.07, 16, 16),
+        new THREE.MeshBasicMaterial({ color: 0xdfe8ff })
+      );
+      sat.position.x = 3.2;
+      satPivot.add(sat);
+      orbit.add(satPivot);
+      scene.add(orbit);
+
+      /* ---------- Model ---------- */
+      let mixer: InstanceType<Three['AnimationMixer']> | null = null;
+      let core: InstanceType<Three['Group']> | null = null;
+      let modelReady = false;
+
+      const buildCore = () => {
+        // Fallback prosedural jika file GLB gagal dimuat
+        core = new THREE.Group();
+        core.add(
+          new THREE.Mesh(
+            new THREE.IcosahedronGeometry(1.4, 1),
+            new THREE.MeshStandardMaterial({ color: 0x141720, metalness: 0.9, roughness: 0.25, flatShading: true })
+          )
+        );
+        core.add(
+          new THREE.LineSegments(
+            new THREE.WireframeGeometry(new THREE.IcosahedronGeometry(1.85, 1)),
+            new THREE.LineBasicMaterial({ color: 0x8ba8ff, transparent: true, opacity: 0.55 })
+          )
+        );
+        modelRoot.add(core);
+      };
+
+      const draco = new DRACOLoader();
+      draco.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.7/');
+      const loader = new GLTFLoader();
+      loader.setDRACOLoader(draco);
+
+      const markReady = () => {
+        modelReady = true;
+        this.dataset.state = 'ready';
+        if (reduced) renderOnce();
+      };
+
+      loader.load(
+        modelPath,
+        (gltf) => {
+          const model = gltf.scene;
+          const box = new THREE.Box3().setFromObject(model);
+          const size = box.getSize(new THREE.Vector3());
+          const center = box.getCenter(new THREE.Vector3());
+          const scale = 4 / Math.max(size.x, size.y, size.z);
+          modelRoot.scale.setScalar(scale);
+          modelRoot.position.set(-center.x * scale, -center.y * scale, -center.z * scale);
+          modelRoot.add(model);
+
+          if (gltf.animations?.length) {
+            mixer = new THREE.AnimationMixer(model);
+            const clip = gltf.animations.find((c) => c.name.toLowerCase().includes('idle')) || gltf.animations[0];
+            mixer.clipAction(clip).play();
+          }
+          markReady();
+        },
+        (e) => {
+          if (e.lengthComputable) progressEl.textContent = `${Math.round((e.loaded / e.total) * 100)}%`;
+        },
+        (err) => {
+          console.warn('GLB failed to load, using procedural core:', err);
+          buildCore();
+          markReady();
+        }
+      );
+
+      /* ---------- Interaksi: drag + inertia, hover tilt, keyboard ---------- */
+      const clock = new THREE.Clock();
+      const s = { yaw: 0, pitch: 0, vel: 0, hx: 0, hy: 0, htx: 0, hty: 0, dragging: false, lx: 0, ly: 0, last: -10 };
+      let intro = reduced ? 1 : 0;
+
+      const touch = () => { this.dataset.touched = 'true'; s.last = clock.elapsedTime; };
+
+      const onDown = (e: PointerEvent) => {
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
+        s.dragging = true; s.lx = e.clientX; s.ly = e.clientY; s.vel = 0;
+        this.dataset.dragging = 'true';
+        try { container.setPointerCapture(e.pointerId); } catch {}
+        touch();
+      };
+      const onMove = (e: PointerEvent) => {
+        const r = container.getBoundingClientRect();
+        if (s.dragging) {
+          const dx = e.clientX - s.lx, dy = e.clientY - s.ly;
+          s.yaw += dx * 0.009;
+          s.vel = s.vel * 0.5 + dx * 0.009 * 0.5;
+          s.pitch = clamp(s.pitch + dy * 0.006, -0.6, 0.6);
+          s.lx = e.clientX; s.ly = e.clientY;
+          touch();
+        }
+        if (e.pointerType === 'mouse') {
+          const x = e.clientX - r.left, y = e.clientY - r.top;
+          s.htx = (x / r.width - 0.5) * 2;
+          s.hty = (y / r.height - 0.5) * 2;
+          light.style.left = `${x}px`;
+          light.style.top = `${y}px`;
+          light.style.opacity = '1';
+        }
+      };
+      const onUp = (e: PointerEvent) => {
+        if (!s.dragging) return;
+        s.dragging = false;
+        delete this.dataset.dragging;
+        try { container.releasePointerCapture(e.pointerId); } catch {}
+        touch();
+      };
+      const onLeave = () => { s.htx = 0; s.hty = 0; light.style.opacity = '0'; };
+      const onKey = (e: KeyboardEvent) => {
+        if (e.key === 'ArrowLeft') { s.yaw -= 0.25; touch(); e.preventDefault(); }
+        else if (e.key === 'ArrowRight') { s.yaw += 0.25; touch(); e.preventDefault(); }
+        else if (e.key === 'ArrowUp') { s.pitch = clamp(s.pitch - 0.15, -0.6, 0.6); touch(); e.preventDefault(); }
+        else if (e.key === 'ArrowDown') { s.pitch = clamp(s.pitch + 0.15, -0.6, 0.6); touch(); e.preventDefault(); }
+      };
+
+      if (!reduced) {
+        container.addEventListener('pointerdown', onDown);
+        container.addEventListener('pointermove', onMove);
+        container.addEventListener('pointerup', onUp);
+        container.addEventListener('pointercancel', onUp);
+        container.addEventListener('pointerleave', onLeave);
+        container.addEventListener('keydown', onKey);
+      }
+
+      /* ---------- Render loop (hemat daya) ---------- */
+      const renderOnce = () => renderer.render(scene, camera);
+      let reqId: number | null = null;
+      let visible = true;
+      let frameNo = 0;
+
+      const frame = () => {
+        reqId = requestAnimationFrame(frame);
+        const dt = Math.min(clock.getDelta(), 0.1);
+        const t = clock.elapsedTime;
+
+        mixer?.update(dt);
+
+        if (modelReady && intro < 1) intro = Math.min(1, intro + dt / 1.7);
+        introGroup.scale.setScalar(modelReady ? 0.6 + 0.4 * easeOutBack(intro) : 0.0001);
+        introGroup.rotation.y = (1 - easeOutExpo(intro)) * -1.8;
+
+        const idle = !s.dragging && t - s.last > 2.5;
+        const scrollTilt = clamp(window.scrollY / 900, 0, 1) * 0.3;
+
+        if (!s.dragging) {
+          s.yaw += s.vel;
+          s.vel *= 0.94;
+          if (idle) s.yaw += (Math.round(s.yaw / TAU) * TAU - s.yaw) * Math.min(1, dt * 1.5);
+          s.pitch += (scrollTilt + s.hty * 0.15 - s.pitch) * 0.06;
+        }
+        s.hx += (s.htx - s.hx) * 0.08;
+        s.hy += (s.hty - s.hy) * 0.08;
+
+        stage.rotation.y = s.yaw + s.hx * 0.25 + Math.sin(t * 0.6) * 0.08;
+        stage.rotation.x = s.pitch;
+        floatGroup.position.y = Math.sin(t * 1.5) * 0.06;
+
+        particles.rotation.y = t * 0.02 + s.hx * 0.15;
+        particles.rotation.x = s.hy * 0.1;
+        satPivot.rotation.z = t * 0.7;
+        if (core) core.rotation.y = t * 0.4;
+        pointer3d.position.set(s.hx * 4, -s.hy * 3, 3.5);
+
+        if (++frameNo % 8 === 0) {
+          const deg = (v: number) => {
+            const d = Math.round(THREE.MathUtils.radToDeg(v));
+            return `${d < 0 ? '-' : ''}${String(Math.abs(d)).padStart(3, '0')}°`;
+          };
+          const yawN = ((stage.rotation.y + Math.PI) % TAU + TAU) % TAU - Math.PI;
+          yawEl.textContent = deg(yawN);
+          pitchEl.textContent = deg(stage.rotation.x);
+        }
+
+        renderer.render(scene, camera);
+      };
+
+      const start = () => { if (reduced) return; if (reqId === null) { clock.getDelta(); frame(); } };
+      const stop = () => { if (reqId !== null) { cancelAnimationFrame(reqId); reqId = null; } };
+      start();
+
+      const io = new IntersectionObserver((entries) => {
+        visible = entries[0].isIntersecting;
+        if (visible && !document.hidden) start(); else stop();
+      });
+      io.observe(container);
+
+      const onVisibility = () => { if (document.hidden) stop(); else if (visible) start(); };
+      document.addEventListener('visibilitychange', onVisibility);
+
+      const ro = new ResizeObserver((entries) => {
+        const { width, height } = entries[0].contentRect;
+        if (!width || !height) return;
+        renderer.setSize(width, height, false);
+        fitCamera(width, height);
+        if (reqId === null) renderOnce();
+      });
+      ro.observe(container);
+
+      const onContextLost = (e: Event) => { e.preventDefault(); stop(); fail(); };
+      canvas.addEventListener('webglcontextlost', onContextLost);
+
+      /* ---------- Cleanup ---------- */
+      this.cleanup = () => {
+        stop();
+        io.disconnect();
+        ro.disconnect();
+        document.removeEventListener('visibilitychange', onVisibility);
+        canvas.removeEventListener('webglcontextlost', onContextLost);
+        container.removeEventListener('pointerdown', onDown);
+        container.removeEventListener('pointermove', onMove);
+        container.removeEventListener('pointerup', onUp);
+        container.removeEventListener('pointercancel', onUp);
+        container.removeEventListener('pointerleave', onLeave);
+        container.removeEventListener('keydown', onKey);
+
+        if (mixer) { mixer.stopAllAction(); mixer.uncacheRoot(mixer.getRoot()); }
+
+        scene.traverse((obj: any) => {
+          obj.geometry?.dispose?.();
+          const mats = Array.isArray(obj.material) ? obj.material : obj.material ? [obj.material] : [];
+          mats.forEach((m: any) => { m.map?.dispose?.(); m.dispose?.(); });
+        });
+        dotTex.dispose();
+        envTarget.dispose();
+        pmrem.dispose();
+        draco.dispose();
+        renderer.dispose();
+        renderer.forceContextLoss();
+      };
+    }
+  }
+
+  if (!customElements.get('cyber-hero')) {
+    customElements.define('cyber-hero', CyberHero);
+  }
+</script>
