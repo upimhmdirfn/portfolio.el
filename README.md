@@ -57,3 +57,71 @@ Make sure you have **Node.js v22.12.0 or higher** installed.
    ```bash
    git clone https://github.com/upimhmdirfn/portfolio.el.git
    cd portfolio.el
+Install dependencies
+
+bash
+npm install
+Run the development server
+
+bash
+npm run dev
+Open http://localhost:4321 in your browser.
+
+Building for Production
+To generate the static production build:
+
+bash
+npm run build
+You can preview the build locally using:
+
+bash
+npm run preview
+📂 Project Structure
+text
+/
+├── public/
+│   └── images/               # Assets (3D GLB models, project thumbnails, portraits)
+├── src/
+│   ├── components/           # UI Components
+│   │   ├── CyberneticHero.astro # The Three.js 3D Astronaut scene
+│   │   ├── ClosingQuote.astro   # Signature typewriter ending
+│   │   ├── SocialLinks.astro    # Reusable social brand icons
+│   │   └── loader/              # Cinematic page loader
+│   ├── content/              # Astro Content Collections (Markdown project files)
+│   ├── data/                 # Centralized configs (portfolio images, social links, profile)
+│   ├── layouts/              # Astro BaseLayout with SEO & Navigation
+│   ├── pages/                # File-based routing (Home, Work, About, Research, etc.)
+│   └── styles/               # Global CSS, Design Tokens, Motion System
+├── astro.config.mjs          # Astro configuration & integrations
+├── package.json
+└── tailwind.config.mjs       # (if applicable)
+🎨 Design System: "Obsidian / Liquid Chrome"
+This project uses a custom @theme configuration in global.css:
+
+Background: #08090C (Deep Obsidian)
+
+Surface: #141720 (Graphite Glass)
+
+Primary Text: #F4F5F7 (Off-white)
+
+Accent: #8BA8FF (Icy Blue)
+
+Typography:
+
+Display: Instrument Serif (Elegant, editorial)
+
+Sans: Geist Variable (Clean, highly legible)
+
+Mono: Geist Mono Variable (Technical metadata)
+
+👨‍💻 Author
+Muhamad Irfan
+Computer Science Graduate from Universitas Pendidikan Indonesia.
+
+LinkedIn
+
+GitHub
+
+Email
+
+<div align="center"> <i>"Build with purpose. Stay curious. Let the work speak."</i> </div> ```
